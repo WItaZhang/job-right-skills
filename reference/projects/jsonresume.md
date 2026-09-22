@@ -1,28 +1,30 @@
 # JSON Resume
 
-[仓库](https://github.com/jsonresume/jsonresume.org) · 结构化档案参考
+[上游仓库](https://github.com/jsonresume/jsonresume.org) · 核心：履历事实结构
 
-核实日期：2026-09-21（America/Los_Angeles）；精确时间 `2026-09-22T00:26:57.3110248Z`。
-默认分支 `master`；状态：未归档（不等于运行质量已验证）；GitHub 识别许可证：MIT。
-核实提交 [`dd0155358c8d`](https://github.com/jsonresume/jsonresume.org/commit/dd0155358c8d85a134d434e49834705243b5eede)，提交时间 `2026-09-09T17:42:32Z`。
+核实日期：2026-09-22（America/Los_Angeles）；读取完成时间 `2026-09-22T23:41:53.0454955+00:00`。
+默认分支 `master`；归档：否；许可：MIT（已读取许可文件）。
+固定提交 [`dd0155358c8d`](https://github.com/jsonresume/jsonresume.org/commit/dd0155358c8d85a134d434e49834705243b5eede)，提交时间 `2026-09-09T17:42:32Z`。
 
-## 可核实内容
-
-JSON Resume 当前 monorepo 内含 canonical resume schema，可表达经历、教育、技能等履历信息。
-
-## 对本项目的价值（分析建议）
-
-借鉴结构化履历和字段校验；把已发生的事实与未来求职偏好拆开。引用当前 packages/schema，避免把旧仓库当成仍活跃维护的入口。
-
-## 限制与未验证项
-
-履历 schema 本身不覆盖完整的兴趣、人生方向、压力、风险容忍或偏好冲突。旧 jsonresume/resume-schema 已归档并指向该 monorepo；未测试整套网站、registry 或导出流程。
-
-## 固定版本阅读入口
+## 一手证据与阅读范围
 
 - [packages/schema/schema.json](https://github.com/jsonresume/jsonresume.org/blob/dd0155358c8d85a134d434e49834705243b5eede/packages/schema/schema.json)
 - [packages/schema/README.md](https://github.com/jsonresume/jsonresume.org/blob/dd0155358c8d85a134d434e49834705243b5eede/packages/schema/README.md)
 - [packages/schema/LICENSE.md](https://github.com/jsonresume/jsonresume.org/blob/dd0155358c8d85a134d434e49834705243b5eede/packages/schema/LICENSE.md)
 
-结论置信度：高：已读 schema 和迁移说明；本项目尚未导入该依赖。
-本页为原创摘要和比较笔记，未复制上游实现。若后续移植代码，需逐文件保留许可证和署名。
+当前 canonical schema 位于 monorepo 的 packages/schema，可表达 work、education、skills、projects 等；包 README 说明从旧 resume-schema 仓库迁入，并把 job schema 标为 draft。
+
+## 可借鉴机制
+
+履历事实使用有类型、可校验的字段，与未来希望从事的工作分开。为每条经历附内部证据引用，而不是从角色名称推断能力。
+
+## 不应照搬之处
+
+简历中做过管理不等于以后想管理；interests 不等于完整人生方向或风险偏好。不能把 draft job schema 当稳定标准，也不需要引入整个网站和主题系统。
+
+## 对 job-right-skills 的映射
+
+映射到 background_facts；preference profile 另含 kind、status、scope、用户确认与变更记录。当前仅字段研究，不发布真实简历，不复制 schema。
+
+结论置信度：高（schema、包文档与许可文件）；未安装依赖。以上映射为本项目的设计建议，不是上游功能承诺。
+本页仅含原创摘要和链接，没有复制上游代码、提示词或完整文档。

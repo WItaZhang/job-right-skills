@@ -1,28 +1,30 @@
 # Open Deep Research
 
-[仓库](https://github.com/langchain-ai/open_deep_research) · 归档架构参考
+[上游仓库](https://github.com/langchain-ai/open_deep_research) · 补充：已归档的研究架构参考
 
-核实日期：2026-09-21（America/Los_Angeles）；精确时间 `2026-09-22T00:27:00.8765643Z`。
-默认分支 `main`；状态：已归档；GitHub 识别许可证：MIT。
-核实提交 [`1b7d2e80db9f`](https://github.com/langchain-ai/open_deep_research/commit/1b7d2e80db9faa586165c60e09096dbbfd483a64)，提交时间 `2026-08-10T18:13:29Z`。
+核实日期：2026-09-22（America/Los_Angeles）；读取完成时间 `2026-09-22T23:41:55.1721882+00:00`。
+默认分支 `main`；归档：是；许可：MIT（已读取许可文件）。
+固定提交 [`1b7d2e80db9f`](https://github.com/langchain-ai/open_deep_research/commit/1b7d2e80db9faa586165c60e09096dbbfd483a64)，提交时间 `2026-08-10T18:13:29Z`。
 
-## 可核实内容
-
-可配置的研究 agent，区分检索、摘要、研究和报告等职责，并提供评估入口。
-
-## 对本项目的价值（分析建议）
-
-参考有界研究任务和配置化的研究过程；在公司与团队调查中增加来源及核实时间，再连接具体 opening。
-
-## 限制与未验证项
-
-仓库已归档，只作为架构参考，不作为优先运行依赖。通用研究 benchmark 的自述成绩不证明求职匹配质量；本次未运行模型、搜索服务或评测。团队归属和岗位开放仍要独立核实。
-
-## 固定版本阅读入口
+## 一手证据与阅读范围
 
 - [README.md](https://github.com/langchain-ai/open_deep_research/blob/1b7d2e80db9faa586165c60e09096dbbfd483a64/README.md)
 - [src/open_deep_research/configuration.py](https://github.com/langchain-ai/open_deep_research/blob/1b7d2e80db9faa586165c60e09096dbbfd483a64/src/open_deep_research/configuration.py)
-- [tests/evaluators.py](https://github.com/langchain-ai/open_deep_research/blob/1b7d2e80db9faa586165c60e09096dbbfd483a64/tests/evaluators.py)
+- [LICENSE](https://github.com/langchain-ai/open_deep_research/blob/1b7d2e80db9faa586165c60e09096dbbfd483a64/LICENSE)
 
-结论置信度：中：已读 README 和配置源码；评估入口仅核实路径，未运行或审计。
-本页为原创摘要和比较笔记，未复制上游实现。若后续移植代码，需逐文件保留许可证和署名。
+README 描述可配置的研究流程和评估入口；configuration.py 提供澄清开关、研究迭代与并发上限等配置。GitHub 元数据显示仓库已归档。
+
+## 可借鉴机制
+
+给公司研究和团队研究分别定义问题、检索范围、停止条件与输出依据；信息不足时先澄清，有预算边界。
+
+## 不应照搬之处
+
+归档框架不作为当前运行依赖；不为做 reference 引入多 agent、数据库或模型服务。通用研究成绩不能证明求职匹配质量，生成的完整叙述也不能补足团队关系证据。
+
+## 对 job-right-skills 的映射
+
+映射到 company research 与 team research 的有界研究 brief。输出是 claim/evidence/unknown；当前只写文档，任务分解不代表已经实现运行时。
+
+结论置信度：中（README 与配置）；未运行或验证 benchmark。以上映射为本项目的设计建议，不是上游功能承诺。
+本页仅含原创摘要和链接，没有复制上游代码、提示词或完整文档。

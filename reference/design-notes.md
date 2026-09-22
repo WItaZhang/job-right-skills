@@ -1,41 +1,33 @@
-# 从参考资料到本项目的设计选择
+# 从参考资料到 job-right-skills 的映射
 
-研究日期：2026-09-21（America/Los_Angeles）。以下是本项目建议，不是上游已实现能力的声明。
+日期：2026-09-22。以下是研究阶段的采纳与不采纳决定；模块名表示未来职责，当前没有对应 agent 实现。
 
-## 先借鉴哪一部分
+| 需求 | 依据 | 采纳的机制 | 本项目补充/不采纳 |
+|---|---|---|---|
+| 结构化 preference profile | [JSON Resume](projects/jsonresume.md)、[career-ops](projects/career-ops.md)、[job-scout](projects/job-scout.md) | 履历与目标分开、维度化记录 | 增加用户确认、scope、revision、unknown；不继承任何示例人物 |
+| hard / soft | [Job Search](projects/job-search.md)、[llm-job-pipeline](projects/llm-job-pipeline.md) | 硬门槛与偏好影响分开 | hard 采用 pass/fail/unknown，不用软分抵消；不继承阈值 |
+| 冲突澄清 | [Job Search](projects/job-search.md)、[偏好引导论文](primary/preference-elicitation.md) | 逐步提问、用具体情境澄清 | 硬冲突与软取舍分开，确认后修订，不静默覆盖 |
+| company→team→opening | [llm-job-pipeline](projects/llm-job-pipeline.md)、[ATS 文档](primary/ats-job-boards.md) | 公司作为研究入口、来源和岗位分开 | 团队是独立证据层；不从标题或部门猜测团队 |
+| 来源与核实时间 | [PROV-O / JobPosting](primary/jobposting-provenance.md) | 来源、派生结论、时间语义分离 | checked_at/verified_at/source_updated_at 分开；当前不用 RDF |
+| 匹配理由 | [career-ops](projects/career-ops.md)、[Job Search](projects/job-search.md) | 逐项依据、优势、缺口 | 绑定 preference_id/evidence_id，不只是给总分 |
+| 置信度 / unknown | [Job Search](projects/job-search.md)、[官方字段](primary/ats-job-boards.md) | 未披露即未知、来源字段缺失保留 | 每个 claim 单独定性置信度；未知不当负面，也不当通过 |
+| 有界研究与采集 | [Open Deep Research](projects/open-deep-research.md)、[JobSpy](projects/jobspy.md) | 明确研究问题、归一字段、预算边界 | 暂不运行、安装或引入整个框架 |
 
-1. 从 [agent-data/job-search](projects/job-search.md) 学习偏好访谈、硬条件和未知项处理。
-   先产出访谈记录与 profile，不急着接实时职位 API。
-2. 从 [career-ops](projects/career-ops.md) 借鉴可逐项审阅的评价报告结构。
-   借鉴结构，不照搬评分阈值或自动工作流。
-3. 从 [JSON Resume](projects/jsonresume.md) 借鉴经历数据的结构化表达；求职意图单独建模。
-4. 公司/团队研究需要来源证据时，再参考 [Open Deep Research](projects/open-deep-research.md)
-   的任务分解；职位数据适配可参考 [JobSpy](projects/jobspy.md)。
+## 当前优先结论
 
-## 建议的最小 profile 信息
+先定义 [偏好与冲突语义](design/preference-profile.md)，再定义 [关系、证据和时效](design/research-evidence.md)。核心是让任何后续判断都能解释“依据哪一版偏好、哪条证据、什么时间核实、哪些仍未知”。
 
-每条偏好保留 `id`、`value`、`kind`（hard/soft）、用户原话来源、确认时间、
-`status`（confirmed/unknown/conflict），以及与其他字段的冲突引用。
-访谈覆盖兴趣、人生方向、压力、风险承受、地点/时间等硬限制和软偏好。
-风险容忍度未知时保持 unknown，不能由简历、项目名称或学校推断。
+先使用逐项定性说明。数字匹配分可以成为以后独立评估的议题，目前没有标注数据证明它可靠；confidence 也不解释成录用概率。
 
-履历事实与未来偏好分别存储；示例数据必须标为 synthetic。个人档案默认不进公开仓库。
-用户没有提供的工作经历、身份条件、技能熟练度和团队关系不填充。
+## 本轮复核纠正
 
-## 建议的证据记录
+- 旧名称 `career-scout-skills` 已按用户要求改为 `job-right-skills`；保留已有研究和 Git 历史。
+- 历史简报中的 `owieschon/career-scout` 当前 API 返回 404；缓存机制线索保留在 [候选笔记](projects/career-scout.md)，不写成已验证实现。
+- `noircir/job-scout` README 自述 MIT，但没有找到完整许可文件；仅作机制比较。
+- JSON Resume 使用当前 monorepo `packages/schema`，旧仓库只说明迁移历史。
+- Open Deep Research 已归档，作为研究架构参考而非当前运行依赖。
+- 没有发现可直接证明整个严格 company→team→opening 链路都完整满足本项目要求的单一参考项目；团队关系证据、冲突修订和核实状态是本项目需要自行明确的部分。
 
-`company → team → opening` 三层独立标记核实状态。每项结论保留原始 URL、
-核实时间、证据支持的具体句意、匹配到的 profile 字段、置信度和未解决问题。
-团队归属和 opening 状态没有一手证据时写 unknown。招聘聚合结果是线索，
-当前开放状态优先回到公司招聘页面核实。
+## 研究交付验收
 
-未知硬条件必须触发澄清；确定违反硬条件则说明理由；软偏好可比较取舍。
-暂不把多个主观维度压缩为一个精确分数，置信度也不冒充校准后的概率。
-
-## 下一步验收案例（尚未实现）
-
-- “只接受远程”与“愿意每周到办公室三天”同时出现：记录 conflict 并询问，不能覆盖。
-- 岗位没有说明远程政策：unknown，不把它判为满足，也不当作明确不满足。
-- 简历写曾带团队：属于历史事实，不能推断用户今后只要管理岗位。
-- opening 页面已失效：标为需重新核实，不能继续声称正在招聘。
-- 任一推荐理由都能追溯到已确认偏好和来源；没有证据的公司/团队判断不能补写。
+已为每条项目与一手资料写明可借鉴机制、不应照搬之处和映射；已记录来源、阅读范围、核实日期及 Git 固定版本；已提供合成场景和未来人工验收预期。未安装上游、未运行 agent、未建立真实个人 profile、未投递或联系公司。没有将文档检查描述为运行测试或 CI 成功。
