@@ -1,0 +1,81 @@
+[
+  {
+    "repository": "agent-data/job-search",
+    "default_branch": "main",
+    "archived": false,
+    "license": "MIT",
+    "sha": "dba0c0992e9d7fc6533dd1be3003df7a311168f0",
+    "commit_date": "2026-08-13T05:39:21Z",
+    "checked_at": "2026-09-22T00:26:48.1098301Z",
+    "reviewed_scope": "高：已读对应访谈与匹配源码文档；运行效果未验证。",
+    "source_paths": [
+      "skills/job-preference-interview/SKILL.md",
+      "skills/evaluate-job-fit/SKILL.md",
+      "examples/sample-preferences.md"
+    ],
+    "note": "projects/job-search.md"
+  },
+  {
+    "repository": "career-ops-hq/career-ops",
+    "default_branch": "main",
+    "archived": false,
+    "license": "MIT",
+    "sha": "39090cdc703fe1c23824ba9d4c294e4a604c0332",
+    "commit_date": "2026-09-21T21:21:04Z",
+    "checked_at": "2026-09-22T00:26:52.3560818Z",
+    "reviewed_scope": "高：已读档案示例和报告；没有运行端到端服务或验证其效果。",
+    "source_paths": [
+      "config/profile.example.yml",
+      "examples/sample-report.md",
+      "README.md"
+    ],
+    "note": "projects/career-ops.md"
+  },
+  {
+    "repository": "speedyapply/JobSpy",
+    "default_branch": "main",
+    "archived": false,
+    "license": "MIT",
+    "sha": "fda080a373e8226f3fd60635323f5da9af9892b1",
+    "commit_date": "2026-02-18T19:39:52Z",
+    "checked_at": "2026-09-22T00:26:54.8517272Z",
+    "reviewed_scope": "中：已读 README 和仓库元数据；采集代码及实时稳定性未审计。",
+    "source_paths": [
+      "README.md",
+      "LICENSE"
+    ],
+    "note": "projects/jobspy.md"
+  },
+  {
+    "repository": "jsonresume/jsonresume.org",
+    "default_branch": "master",
+    "archived": false,
+    "license": "MIT",
+    "sha": "dd0155358c8d85a134d434e49834705243b5eede",
+    "commit_date": "2026-09-09T17:42:32Z",
+    "checked_at": "2026-09-22T00:26:57.3110248Z",
+    "reviewed_scope": "高：已读 schema 和迁移说明；本项目尚未导入该依赖。",
+    "source_paths": [
+      "packages/schema/schema.json",
+      "packages/schema/README.md",
+      "packages/schema/LICENSE.md"
+    ],
+    "note": "projects/jsonresume.md"
+  },
+  {
+    "repository": "langchain-ai/open_deep_research",
+    "default_branch": "main",
+    "archived": true,
+    "license": "MIT",
+    "sha": "1b7d2e80db9faa586165c60e09096dbbfd483a64",
+    "commit_date": "2026-08-10T18:13:29Z",
+    "checked_at": "2026-09-22T00:27:00.8765643Z",
+    "reviewed_scope": "中：已读 README 和配置源码；评估入口仅核实路径，未运行或审计。",
+    "source_paths": [
+      "README.md",
+      "src/open_deep_research/configuration.py",
+      "tests/evaluators.py"
+    ],
+    "note": "projects/open-deep-research.md"
+  }
+]
