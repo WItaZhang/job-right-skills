@@ -206,3 +206,86 @@ def test_looks_like_installed_plugin():
     assert rw.looks_like_installed_plugin(Path("C:/Users/u/.claude/plugins/marketplaces/x"))
     assert rw.looks_like_installed_plugin(Path("/opt/custom/plugins/cache/job-right/0.1.0"))
     assert not rw.looks_like_installed_plugin(Path("/home/u/projects/job-right-skills/workspace"))
+
+
+# ----------------------------------------------------------------- R28: verification never touches files
+
+def _snapshot(ws: Path) -> dict[str, bytes]:
+    return {str(p.relative_to(ws)): p.read_bytes() for p in ws.rglob("*") if p.is_file()}
+
+
+def _seed_collisions(ws: Path) -> dict[str, bytes]:
+    files = {
+        "profile/.ignore-probe": b"user file that happens to share the probe name\n",
+        "profile/nested/README.md": b"# private notes\nkeep me\n",
+        "directions/.ignore-probe": b"another collision\n",
+        "directions/dir-001.md": b"---\nid: dir-001\n---\n",
+    }
+    for rel, content in files.items():
+        p = ws / rel
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_bytes(content)
+    return files
+
+
+def test_r28_success_path_leaves_existing_files_untouched(tmp_path):
+    repo = make_repo(tmp_path / "repoJ")
+    code, out = run(["--init"], cwd=repo)
+    assert code == 0, out
+    ws = repo / "workspace"
+    seeded = _seed_collisions(ws)
+    before = _snapshot(ws)
+    ok, notes = rw.verify_ignore(ws)
+    assert ok, notes
+    after = _snapshot(ws)
+    assert after == before
+    for rel, content in seeded.items():
+        assert (ws / rel).read_bytes() == content
+
+
+def test_r28_failure_path_leaves_existing_files_untouched(tmp_path):
+    repo = make_repo(tmp_path / "repoK")
+    ws = repo / "workspace"
+    ws.mkdir()
+    (ws / ".gitignore").write_text(rw.IGNORE_BLOCK_START + "\nprofile/\n", encoding="utf-8")  # weak, marker present
+    seeded = _seed_collisions(ws)
+    before = _snapshot(ws)
+    ok, notes = rw.verify_ignore(ws)
+    assert not ok
+    assert any("directions" in n and "NOT ignored" in n for n in notes)
+    assert _snapshot(ws) == before
+    for rel, content in seeded.items():
+        assert (ws / rel).read_bytes() == content
+
+
+def test_r28_git_error_is_reported_not_passed_and_touches_nothing(tmp_path, monkeypatch):
+    repo = make_repo(tmp_path / "repoL")
+    code, out = run(["--init"], cwd=repo)
+    assert code == 0, out
+    ws = repo / "workspace"
+    _seed_collisions(ws)
+    before = _snapshot(ws)
+    real_run = rw._run
+
+    def failing_run(cmd, cwd=None, input_text=None):
+        if "check-ignore" in cmd:
+            proc = real_run(["git", "--no-such-flag"], cwd=cwd)  # a real failing git call
+            return proc
+        return real_run(cmd, cwd=cwd, input_text=input_text)
+
+    monkeypatch.setattr(rw, "_run", failing_run)
+    ok, notes = rw.verify_ignore(ws)
+    assert not ok
+    assert any("could not verify ignore rules" in n for n in notes)
+    assert _snapshot(ws) == before
+
+
+def test_r28_verify_creates_no_directories(tmp_path):
+    repo = make_repo(tmp_path / "repoM")
+    ws = repo / "workspace"
+    ws.mkdir()
+    (ws / ".gitignore").write_text(rw.IGNORE_BLOCK, encoding="utf-8")
+    listing_before = sorted(p.relative_to(ws) for p in ws.rglob("*"))
+    ok, notes = rw.verify_ignore(ws)
+    assert ok, notes
+    assert sorted(p.relative_to(ws) for p in ws.rglob("*")) == listing_before

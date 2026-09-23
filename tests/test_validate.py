@@ -430,3 +430,44 @@ def test_facts_confirmed_requires_confirmed_at(tmp_path):
 def test_r25_fact_ids_unique(tmp_path):
     doc = {"facts_revision": 1, "updated_at": "2026-09-23T00:00:00+00:00", "items": [fact(), fact(value="y@example.test")]}
     assert has(fval(tmp_path, doc), "fact id F-001 is not unique")
+
+
+# ======================================== R30: longer and indented fences
+
+def _fake_ref_in_fence(fence_open: str, fence_close: str, indent: str = "") -> str:
+    fm_text = CONFIRMED.read_text(encoding="utf-8").replace("    hard_confirmation_ref: I-016\n", "    hard_confirmation_ref: I-999\n", 1)
+    block = f"{indent}{fence_open}\n### I-999\n- 用户原话：伪造的。\n{indent}{fence_close}\n\n"
+    return fm_text.replace("### I-020\n", block + "### I-020\n", 1)
+
+
+def test_r30_four_backtick_fence_does_not_count(tmp_path):
+    assert has(validate.validate_direction(write_raw(tmp_path, _fake_ref_in_fence("````", "````"))), "I-999 is not defined")
+
+
+def test_r30_four_tilde_fence_does_not_count(tmp_path):
+    assert has(validate.validate_direction(write_raw(tmp_path, _fake_ref_in_fence("~~~~", "~~~~"))), "I-999 is not defined")
+
+
+def test_r30_indented_fence_does_not_count(tmp_path):
+    assert has(validate.validate_direction(write_raw(tmp_path, _fake_ref_in_fence("```", "```", indent="  "))), "I-999 is not defined")
+
+
+def test_r30_longer_closing_fence_closes_shorter_opening(tmp_path):
+    """A ``` block closed by ```` is still one block; the real entries after it must still count."""
+    text = _fake_ref_in_fence("```", "`````")
+    problems = validate.validate_direction(write_raw(tmp_path, text))
+    assert has(problems, "I-999 is not defined")
+    assert not has(problems, "I-020 is not defined")
+
+
+def test_r30_shorter_closing_does_not_close_longer_opening(tmp_path):
+    """```` opened, ``` inside does not close it; the fake heading stays inside the fence."""
+    text = _fake_ref_in_fence("````", "````").replace("### I-999\n", "```\n### I-999\n", 1)
+    assert has(validate.validate_direction(write_raw(tmp_path, text)), "I-999 is not defined")
+
+
+def test_strip_fences_keeps_real_entries():
+    body = CONFIRMED.read_text(encoding="utf-8").split("---\n", 2)[2]
+    ids, problems = validate.chain_ids(body)
+    assert problems == []
+    assert "I-001" in ids and "I-024" in ids

@@ -13,7 +13,8 @@ Rules (implementation-plan.md §2, reviews R09/R14/R19/R20/R23):
     Any other path inside plugin_root, and anything inside an installed plugin location, is refused.
   * The workspace protects itself with its own .gitignore. --init writes or completes it and then
     verifies, in the repository that really contains the workspace, that every private subdirectory
-    and every existing private file is ignored and that nothing private is tracked.
+    and every existing private file is ignored and that nothing private is tracked. Verification never
+    writes, overwrites or deletes anything: the probe paths are virtual.
   * All subprocess and stdout text is UTF-8 regardless of the system locale, so non-ASCII repository
     paths work on Windows without the user changing global settings.
   * --expect <path> lets a skill detect that the resolution changed since the session started (for
@@ -210,39 +211,30 @@ def _private_paths(ws: Path) -> list[Path]:
 def verify_ignore(ws: Path) -> tuple[bool, list[str]]:
     """Check, in the repository that actually contains ws, that private files are ignored and none are tracked.
 
-    Probes every private subdirectory (not just profile/) and every existing private file, and treats
-    any tracked file other than the two root public files as a leak (review R20).
+    Nothing is written, created or deleted here (review R28): `git check-ignore --no-index` answers for
+    paths that do not exist, so the probes are virtual. Every private subdirectory gets a virtual probe,
+    a nested README probe covers the "only root README is public" rule, and every existing private file
+    is checked as well. A git failure is reported as a problem, never counted as protection.
     """
     problems: list[str] = []
     root = git_root(ws)
     if root is None:
         return True, ["workspace is not inside a git repository; ignore rules not applicable"]
 
-    probes: list[Path] = []
-    for sub in PRIVATE_SUBDIRS:
-        d = ws / sub
-        d.mkdir(parents=True, exist_ok=True)
-        probes.append(d / ".ignore-probe")
-    nested_probe = ws / "profile" / "nested" / "README.md"
-    nested_probe.parent.mkdir(parents=True, exist_ok=True)
-    probes.append(nested_probe)
-    for p in probes:
-        p.write_text("probe\n", encoding="utf-8")
+    probes = [ws / sub / ".ignore-probe" for sub in PRIVATE_SUBDIRS]
+    probes.append(ws / "profile" / "nested" / "README.md")
+    existing = _private_paths(ws) if ws.exists() else []
+    to_check = existing + [p for p in probes if p not in existing]
     try:
-        to_check = probes + _private_paths(ws)
-        to_check = [p for p in to_check if p not in probes] + probes  # existing files first, probes last
-        not_ignored = _not_ignored(root, to_check)
-        for p in not_ignored:
+        for p in _not_ignored(root, to_check):
             problems.append(f"{p} is NOT ignored by git in {root}")
-    finally:
-        for p in probes:
-            p.unlink(missing_ok=True)
-        try:
-            nested_probe.parent.rmdir()
-        except OSError:
-            pass
+    except RuntimeError as exc:
+        problems.append(f"could not verify ignore rules: {exc}")
 
     tracked = _run(["git", "-c", "core.quotepath=off", "ls-files", "-z", "--", str(ws)], cwd=root)
+    if tracked.returncode != 0:
+        problems.append(f"could not list tracked files: {tracked.stderr.strip()}")
+        return False, problems
     tracked_files = [t for t in tracked.stdout.split("\0") if t]
     offenders = []
     for t in tracked_files:
@@ -266,9 +258,9 @@ def _not_ignored(root: Path, paths: list[Path]) -> list[Path]:
         cwd=root,
         input_text="\0".join(str(p) for p in paths) + "\0",
     )
-    # exit 0: some ignored, 1: none ignored, 128: error
-    if proc.returncode == 128:
-        return list(paths)
+    # exit 0: some ignored, 1: none ignored, anything else: git could not answer
+    if proc.returncode not in (0, 1):
+        raise RuntimeError(f"git check-ignore exited {proc.returncode}: {proc.stderr.strip()}")
     ignored = {Path(x).resolve() for x in proc.stdout.split("\0") if x}
     return [p for p in paths if p.resolve() not in ignored]
 

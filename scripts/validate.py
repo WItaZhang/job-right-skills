@@ -37,7 +37,7 @@ SCHEMA_DIR = PLUGIN_ROOT / "schema"
 FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*\n(.*)\Z", re.DOTALL)
 CHAIN_HEADING_RE = re.compile(r"^###\s+(I-[0-9]{3,})\b", re.MULTILINE)
 H2_RE = re.compile(r"^##\s+(.+?)\s*$", re.MULTILINE)
-FENCE_RE = re.compile(r"^(```|~~~).*?^\1[ \t]*$", re.MULTILINE | re.DOTALL)
+FENCE_OPEN_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
 CHAIN_TITLE = "追问链"
 REVISION_TITLE = "修订记录"
 KEY_FIELDS_MIN, KEY_FIELDS_MAX = 2, 4
@@ -118,9 +118,29 @@ def _duplicates(values) -> list:
     return dup
 
 
+def strip_fences(body: str) -> str:
+    """Remove fenced code blocks (CommonMark rules: same fence character, closing length >= opening,
+    up to three spaces of indentation). Content inside a fence is an illustration, never evidence
+    (reviews R24, R30). An unterminated fence runs to the end of the body."""
+    out: list[str] = []
+    fence_char, fence_len = None, 0
+    for line in body.splitlines(keepends=True):
+        m = FENCE_OPEN_RE.match(line)
+        if fence_char is None:
+            if m:
+                fence_char, fence_len = m.group(1)[0], len(m.group(1))
+                continue
+            out.append(line)
+        else:
+            if m and m.group(1)[0] == fence_char and len(m.group(1)) >= fence_len and not line[m.end():].strip():
+                fence_char, fence_len = None, 0
+            # inside a fence: drop the line
+    return "".join(out)
+
+
 def body_sections(body: str) -> dict[str, str]:
     """Split the Markdown body into {h2 title: section text}, ignoring headings inside code fences."""
-    cleaned = FENCE_RE.sub("", body)
+    cleaned = strip_fences(body)
     sections: dict[str, str] = {}
     matches = list(H2_RE.finditer(cleaned))
     for i, m in enumerate(matches):
