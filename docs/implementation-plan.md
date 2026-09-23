@@ -1,196 +1,300 @@
-# job-right-skills 实现方案（待确认）
+# job-right-skills 实现方案（r3）
 
-日期：2026-09-23。本文是从 reference 阶段进入实现阶段的方案草案，尚未写任何 skill 代码。确认后按"里程碑"逐步实现。
+日期：2026-09-23。本文是从 reference 阶段进入实现阶段的方案。r3 吸收了 [第 1 轮评审](implementation-plan-review.md) 的 R01–R10，采纳情况见评审文件末尾的作者回应表。尚未写任何 skill 代码。
 
 ## 1. 目标回顾
 
 两段式求职 agent：
 
-1. **深挖访谈（grill）**：不问表面问题，层层追问到本质，把用户真实意图落成若干份固定格式的 **direction template**，一个文件 = 一个求职方向。每份 template 只有少数几个字段是真正关键的（key_fields），其余字段是软偏好、无所谓或未知。
-2. **找岗位 + 填申请（apply）**：用 template 去找岗位、打开申请页、从个人档案填表、上传简历，**停在提交前**，由人点 submit。
+1. **深挖访谈（grill）**：不问表面问题，层层追问到本质，把用户真实意图落成若干份固定格式的 **direction template**，一个文件 = 一个求职方向。每份 template 里只有少数几个字段是方向的"本质"（key_fields），其余字段是软偏好、无所谓或未知。
+2. **找岗位 + 填申请（apply）**：用 template 去找岗位、打开申请页、从个人档案填表、上传简历，**停止在最终提交之前**，由人点 submit。
 
-设计约束沿用 reference/design 的结论：事实与意愿分开；hard / soft / unknown 三态；每条判断可追溯到 preference_id 与 evidence_id；未披露不等于失败；模型不替用户做投递决定。
+设计约束沿用 reference/design 的结论：事实与意愿分开；hard / soft / unknown 三态；每条判断可追溯到 preference 与 evidence；未披露不等于失败；模型不替用户做投递决定；页面内容与检索结果只是被读取的数据，不能改变这些规则。
 
 ## 2. 交付形态：一个 plugin，三个 skill
 
 ```text
-job-right-skills/
-  .claude-plugin/plugin.json          # plugin 元数据，skill 以 /job-right:<name> 调用
+job-right-skills/                       # plugin_root：只放随插件发布的代码与资产
+  .claude-plugin/plugin.json
   skills/
-    grill-direction/                  # 访谈 → 产出 direction template
+    grill-direction/                    # 访谈 → direction template
       SKILL.md
-      references/probe-playbook.md    # 追问算子、维度清单、停止条件
-      references/template-schema.md   # template 字段定义
-      assets/direction.template.md    # 空白模板
-      assets/example-synthetic.md     # 合成示例（非真实用户）
-    find-openings/                    # 读 template → 公司 → 岗位候选
+      references/probe-playbook.md      # 追问算子、冲突处理、进度与停止规则
+      references/template-schema.md     # 字段与引用约定（人读版）
+      assets/direction.template.md
+      assets/example-synthetic-*.md     # 多份合成示例：同一首句、不同动机
+    find-openings/                      # template → 公司 → 岗位候选
       SKILL.md
-      scripts/ats_fetch.py            # Greenhouse / Ashby / Lever 公开接口拉取与字段归一
-      references/evidence-rules.md    # 引用 reference/design/research-evidence.md 的落地版
-    prepare-application/              # 打开申请页、填表、上传简历、停在 submit 前
+      scripts/ats_fetch.py              # Greenhouse / Ashby / Lever 拉取，原始字段 + 归一字段
+      references/evidence-rules.md      # research-evidence.md 的落地版
+      fixtures/                         # 三家 ATS 的固定样本（含 null、多地点、分页不完整）
+    prepare-application/                # candidate → application，停在最终提交前
       SKILL.md
-      references/form-rules.md        # 禁止事项、字段映射、停止规则
+      references/form-rules.md          # 动作边界、字段映射、blockers、审阅规则
+      fixtures/local-form/              # 本地受控表单 + 记录 POST 的小服务器
   schema/
-    direction.schema.json             # template frontmatter 的 JSON Schema，用于校验
-    background_facts.schema.json      # 个人事实档案
-  workspace/                          # 运行时数据目录（默认 gitignore）
-    profile/background_facts.yaml     # 履历事实（私有）
-    directions/*.md                   # 每个方向一份 template
-    candidates/<direction-id>.md      # 该方向的岗位候选与证据
-    applications/<opening-id>.md      # 填表记录，状态止于 ready_for_review
-  reference/                          # 现有研究笔记，不动
-  docs/implementation-plan.md         # 本文
+    direction.schema.json
+    candidate.schema.json
+    application.schema.json
+    background_facts.schema.json
+  scripts/
+    resolve_workspace.py                # 解析并记录 workspace_root
+    validate.py                         # 按 schema 校验 direction / candidate / application
+  requirements.txt                      # pyyaml, jsonschema；Python >= 3.10
+  reference/                            # 现有研究笔记，不动
+  docs/                                 # 方案与评审
 ```
 
-选 plugin 而不是单个 skill 的原因：三段职责不同、工具权限不同（访谈不需要网络，填表需要浏览器），分开后可以各自限定 allowed-tools，也方便单独 eval。
+**workspace 与 plugin_root 分离（R09）**：三个 skill 都通过 `scripts/resolve_workspace.py` 解析一个绝对 `workspace_root`，顺序为：环境变量 `JOB_RIGHT_WORKSPACE` → 当前目录所在 git 仓库根下的 `workspace/` → 报错要求用户指定。解析结果写入 `<workspace_root>/.job-right.json`，恢复会话时校验一致。plugin_root 只用于定位 scripts、schema、assets、fixtures，永不作为私人数据根目录，因为已安装插件会被复制进版本化缓存并在更新后清理。
+
+workspace 目录结构：
+
+```text
+<workspace_root>/
+  .job-right.json                       # workspace_root、plugin 版本、创建时间
+  profile/background_facts.yaml         # 履历事实（私有）
+  directions/<direction-id>.md
+  candidates/<direction-id>.md
+  applications/<opening-id>.md
+  evidence/<opening-id>/                 # 原始快照（JD 正文、列表页 JSON）
+```
+
+`.gitignore` 忽略 `workspace/**` 的真实运行内容，只跟踪 `workspace/README.md` 与各目录 `.gitkeep`；M0 用 `git check-ignore -v` 验证规则。
+
+**关于 allowed-tools（R07）**：SKILL.md 的 `allowed-tools` 是调用时的工具预授权，不是隔离边界。三个 skill 分开的理由是职责与评测分离；"不提交"由 §5 的操作边界、回读与本地测试保证，不依赖工具列表。
 
 ## 3. grill-direction：访谈 skill 设计
 
 ### 3.1 借鉴什么
 
-- **grill-me（Matt Pocock）**：按"轮"提问，每轮问完当前 frontier（前置已答完的所有问题），frontier 为空即结束；用户拥有 scope。我们借它的轮次与停止条件，但**不照搬无状态**：我们必须落盘。
-- **agent-data/job-search 的访谈 skill**：11 个维度、跳过无关维度、每 4–5 轮回读确认。我们借"回读确认"，不借 prose brief 和 must-have 缺失即拒绝。
-- **example-critiquing 论文**：用 2–3 个合成情境让用户说出愿意牺牲什么。这是"替代方案测试"的依据。
+- **grill-me**：按"轮"提问，每轮问完当前 frontier（前置已答完的问题），frontier 为空即结束；用户拥有 scope。借轮次与停止思路，不借无状态。
+- **agent-data/job-search 访谈 skill**：跳过无关维度、每 4–5 轮回读确认。借"回读确认"，不借 prose brief 与"缺失即拒绝"。
+- **example-critiquing**：用 2–3 个合成情境让用户说出愿意牺牲什么。这是替代方案测试与强度确认的依据。
 
-### 3.2 核心机制：why-ladder + 替代方案测试
+### 3.2 核心机制：why-ladder，含义与强度分开确认（R01、R03）
 
-每条用户表述都走同一条追问链：
+每条用户表述走同一条追问链：
 
 | 步骤 | 做什么 | 例子 |
 |---|---|---|
-| stated | 记下原话 | "想在美国工作" |
+| stated | 记原话，生成 `source_ref` | "想在美国工作" |
 | why | 问这个选择给你带来什么 | "美国哪里吸引你？" → "年轻人多、tech 聚集" |
-| attribute | 把回答抽象成可观察属性 | city_profile = 年轻科技聚集城市 |
-| alt_test | 用满足同一属性的其他选项测试 | "深圳、新加坡这类城市可以吗？" |
-| resolve | 根据回答决定字段值与强度 | 可以 → 城市字段变成属性集合，kind=hard；不可以 → 追问差异（身份？语言？薪资？），可能拆出新字段 |
+| attribute | 抽象成可独立确认的字段，并记录用户认可的**可观察依据** | `location.city_profile`，依据示例：科技公司密度、25–35 岁从业者比例高、有活跃的技术社区 |
+| alt_test | 用满足同一属性的其他选项测试**含义** | "深圳、新加坡这类城市可以吗？" → 可以 ⇒ 属性是城市氛围而不是国家；不可以 ⇒ 追问差异，可能拆出 `location.country` 或 `legal.work_authorization_goal` 等新字段 |
+| strength | 单独确认**强度** | "如果一个岗位其他都很好，但所在城市没有这种氛围，你还会拒绝吗？" → 会 ⇒ hard；看情况 ⇒ soft |
+| resolve | 写入字段：value、kind、scope、`alt_test_ref`、`hard_confirmation_ref` | 见 §3.4 |
 
 规则：
 
-- 一次只推进一个 ladder，但一轮可以并行开多个 ladder（frontier）。
-- 每个 key_field 至少经过一次 alt_test 才能标 confirmed；没做过 alt_test 的字段最多是 draft。
-- 追问发现用户其实有两条互不兼容的动机（如"硅谷式城市"与"拿美国身份"），**拆成两份 template**，不硬塞进一份。
-- 允许"无偏好 / 跳过 / 暂不知道"三种回答，分别写成 any / skipped / unknown，不互换。
-- 每 4–5 轮回读一次当前 template 草稿，让用户纠正。
-- 停止条件：每份 template 的 key_fields 都 confirmed，其余字段至少标了 soft/any/unknown，且 frontier 为空。
+- **替代方案可接受 ≠ 不可退让**。alt_test 只确定字段含义；kind=hard 必须有独立的 `hard_confirmation_ref`。用户前文已明确说过底线的，引用那句原话即可，不机械重问。
+- **字段独立确认**。城市氛围与工作方式（remote/hybrid）是两个字段，各有自己的 kind 与引用；公司人数与融资阶段亦然。只有用户把组合条件整体表述并整体测试过，才作为一个组合字段，且不能为凑数或规避数量限制而打包。
+- **举例 vs 清单**。`examples` 是帮助理解属性的城市举例；`allowed_values` 才是限定清单。两者分开记录。
+- 一次只推进一个 ladder，一轮可并行多个 ladder（frontier）。
+- 允许"无偏好 / 跳过 / 暂不知道"三种回答，分别写成 kind=any / skipped / unknown，不互换，不自动重新进入 frontier。
+- 每 4–5 轮回读一次当前 draft，让用户纠正。
 
-### 3.3 访谈维度（frontier 的来源）
+### 3.3 冲突、拆方向、进度与停止（R04）
 
-沿用 reference/design/preference-profile.md 的 8 个维度：兴趣动力、人生方向、压力承受、风险容忍、角色与成长、地点与时间、薪酬与身份、团队环境。skill 不按顺序问遍，而是从用户第一句话出发展开 ladder，只在 frontier 为空但仍有维度完全 unknown 时才主动开一个新维度。
+**冲突处理**：发现两条要求不一致时，先检查时间、地点、角色 scope 是否相同 → 不同 scope 则补齐 scope 而非判冲突 → 同 scope 再区分：两个 hard 不可同时满足（阻塞冲突，标 conflict，问一个能改变判断的最小问题）／soft 取舍（记录取舍，不判自相矛盾）／用户接受的备选路线。**只有用户明确确认两条路线可以各自独立接受时，才拆成两份 template**；拆分不是消除冲突的自动手段，也不能把用户要求的 A AND B 变成 A OR B。
+
+**进度与字段状态分开**：访谈进度记录每个维度是 not_asked / asked；字段状态记录 confirmed / unknown / skipped / any / conflict。frontier 为空且仍有 not_asked 维度时才主动开新维度；已问过但回答 unknown 或 skipped 的不重开，除非新信息使原问题重新有意义。
+
+**停止**：用户要求暂停，或当前范围内的 frontier 为空，即可保存 draft 并停止。confirmed 另有校验条件（§3.5），不要求为了结束访谈填满所有维度。draft 可以恢复继续。
 
 ### 3.4 产出：direction template
 
-Markdown 文件，YAML frontmatter 是结构化部分，正文是追问链与备注。frontmatter 示意（合成例子）：
+Markdown 文件。**frontmatter 是当前 revision 的快照**；正文 `## 追问链` 记录每条 ladder 的引用内容，`## 修订记录` 追加旧值、新值、原因、来源。不在同一 YAML mapping 里重复追加同名键。
+
+合成示例（完整回答链下的预期，不是所有"想去美国"输入的固定答案）：
 
 ```yaml
 id: dir-001
 title: 年轻科技聚集城市里的中型 AI infra 公司，做 IC
-revision: 2
-status: confirmed          # draft | confirmed
+revision: 3
+status: confirmed                # draft | confirmed
 created_at: 2026-09-23T10:00:00+08:00
-key_fields: [location, role_nature, company_stage]   # 真正关键的 2–4 个
+key_fields: [location.city_profile, role.nature, company.size]
 fields:
-  location:
-    value: {city_profile: tech_hub_young, examples: [深圳, 新加坡, 旧金山湾区], remote: hybrid_ok}
-    kind: hard             # hard | soft | any | unknown | skipped
-    alt_tested: true
-    rationale: "要的是年轻科技聚集的氛围，不是美国本身"
-  role_nature:
+  location.city_profile:
+    value: tech_hub_young
+    observable_criteria: [科技公司密度高, 25–35 岁从业者比例高, 有活跃线下技术社区]
+    examples: [深圳, 新加坡, 旧金山湾区]
+    kind: hard
+    scope: {valid_from: 2026-10, roles: all}
+    source_ref: I-003
+    alt_test_ref: I-007
+    hard_confirmation_ref: I-009
+  location.workplace_type:
+    value: [hybrid, onsite]
+    kind: soft
+    source_ref: I-011
+    alt_test_ref: null
+  role.nature:
     value: IC
     kind: hard
-    alt_tested: true
-  company_stage:
-    value: {size: "50-500", stage: [series_b, series_c, growth]}
+    source_ref: I-014
+    alt_test_ref: I-015
+    hard_confirmation_ref: I-016
+  company.size:
+    value: {min: 50, max: 500}
     kind: hard
-    alt_tested: true
+    source_ref: I-018
+    alt_test_ref: I-019
+    hard_confirmation_ref: I-020
+  company.funding_stage:
+    value: [series_b, series_c, growth]
+    kind: soft
+    source_ref: I-021
   industry:
     value: [AI infra, developer tools]
     kind: soft
-  company_style:
-    value: {pace: fast, process: light}
-    kind: soft
-  compensation:
+    source_ref: I-005
+  compensation.base:
     value: null
     kind: unknown
+    note: 币种与期间口径未定
 search_hints:
   keywords: [infrastructure engineer, platform engineer, ML infra]
-  exclude: [manager, lead]
+  deprioritize: [manager, lead]      # 只影响发现排序，不是拒绝证据
 open_questions:
   - "薪酬底线口径未定（币种、base/total）"
+interview_progress:
+  asked: [兴趣动力, 地点与时间, 角色与成长, 风险容忍]
+  not_asked: [压力承受, 团队环境, 人生方向, 薪酬与身份]
 ```
 
-正文部分固定两节：`## 追问链`（每条 ladder 的 stated / why / attribute / alt_test / resolve）和 `## 修订记录`（revision、改了什么、为什么）。旧值不覆盖，只追加。
+正文 `## 追问链` 中每个 `I-xxx` 是一条访谈引用：时间、用户原话（私有）、访谈者问题、得出的结论。
 
-`schema/direction.schema.json` 用来校验 frontmatter；key_fields 必须是 fields 里 kind=hard 且 alt_tested=true 的字段，数量 2–4。
+### 3.5 key_fields 与 hard 的关系（R02，对第 7 节规则含义的明确）
+
+- **所有 kind=hard 的字段都参与 find-openings 的 pass/fail/unknown 过滤**。
+- **key_fields 是方向的"本质"**：从 hard 字段中选出 2–4 个，用于搜索重点、方向标题和向用户解释"这个方向到底是什么"。key_fields ⊆ hard 字段。
+- **confirmed 的条件**：key_fields 数量 2–4；每个 key_field 有 alt_test_ref 与 hard_confirmation_ref；不存在 status=conflict 的字段；不存在适用范围内的 hard 字段缺少 hard_confirmation_ref。
+- **draft 不受数量限制**，如实保留所有已表达条件。用户只有一个 hard，或用户说"没有硬条件"，都忠实记录，方向停在 draft；find-openings 可以对 draft 运行，但输出标明"基于未确认方向"。有五个同范围 hard 时全部保留并参与过滤，key_fields 取其中 4 个，不丢弃、不合并、不自动拆方向。
+
+这是对原"只对 key_fields 做 hard 判断"的修正：只检查 key_fields 会漏掉第五个 hard。
+
+**validator 能证明什么**：`scripts/validate.py` 校验结构、引用存在、引用关联一致（如 hard 字段必有 hard_confirmation_ref 且该引用在追问链里存在）。它不能证明引用内容真的支持判断，那是 §6 行为评测的事。
+
+### 3.6 访谈维度
+
+沿用 reference/design/preference-profile.md 的 8 个维度：兴趣动力、人生方向、压力承受、风险容忍、角色与成长、地点与时间、薪酬与身份、团队环境。不按顺序问遍，从用户第一句话展开 ladder。身份与工作授权只记用户陈述，不从目标地点或求职动机推断。
 
 ## 4. find-openings：找岗位 skill 设计
 
-输入：一份 direction template（或多份）+ background_facts。输出：`workspace/candidates/<direction-id>.md`，每个候选带公司→团队→岗位三层证据、hard 字段 pass/fail/unknown、软字段取舍。
+输入：一份或多份 direction（confirmed 或 draft）+ background_facts。输出：`candidates/<direction-id>.md`。
 
-流程：
+### 4.1 流程
 
-1. **公司发现**：先用 template 的 key_fields 与 search_hints 做 WebSearch，列出候选公司；用户也可以直接给公司名单。公司被发现不等于被选中。
-2. **岗位拉取**：对每家公司，先从官网确认其招聘板（Greenhouse / Ashby / Lever 之一），再用 `scripts/ats_fetch.py` 拉取当前已发布岗位，归一成统一字段（provider、posting_id、title、department、team、location、workplace_type、source_updated_at、url、checked_at）。找不到官方 ATS 的公司记 unknown，不猜 board slug。
-3. **匹配判断**：只对 key_fields 做 hard 判断（pass/fail/unknown），软字段列取舍；结果四选一：rejected / needs_clarification / needs_verification / eligible_for_comparison。
-4. **输出**：candidates 文件按 eligible → needs_verification → rejected 分组，每条带 evidence 与 checked_at；用户在文件里标 user_decision（interested / not_interested）。
+1. **公司发现**：用 key_fields 与 search_hints 做 WebSearch，或用户直接给公司名单。公司被发现不等于被选中。`search_hints.deprioritize` 只影响发现与排序，不作为拒绝证据。
+2. **招聘板确认**：从公司官网找到招聘板链接，记录 official_site → board 的关联证据；找不到官方 ATS 的记 unknown，不猜 board slug。
+3. **岗位拉取**：`scripts/ats_fetch.py` 按 provider 拉取（R06）：
+   - 保留原始响应快照到 `evidence/<opening-id>/`，归一字段与原始字段并列，不覆盖。
+   - 岗位身份：provider + board/site + 原生 posting_id；缺原生 ID 时用官方 canonical URL 派生并标 `id_source: derived_from_url`。
+   - 字段：title、department（原始）、team（原始，null 则 null，不用 department 补）、locations[]、workplace_type、job_url、apply_url、jd_content 或快照引用、source_published_at、source_updated_at、checked_at、retrieval_status（success / partial / failed / not_checked）、coverage（分页范围）。
+   - 时间语义按 provider 单独映射：Ashby publishedAt → source_published_at；Greenhouse updated_at → source_updated_at；Lever createdAt → source_published_at；没有的保留 null。checked_at 始终是本次读取时间。
+   - 404 / 超时 → retrieval_status=failed、opening_status=unknown，保留上次成功核实时间；分页不完整 → partial；完整读取零结果 → success 且零结果。
+4. **匹配判断**：对所有 hard 字段做 pass / fail / unknown，每项绑定 field_id、direction revision、evidence 引用；软字段列符合 / 取舍 / 未知。缺正文证据保持 unknown，不凭模型对公司或城市的印象判 pass。薪酬缺币种、期间或 base/total 口径时不比较。
+5. **结果与状态**：match_status 四选一，按 reference 顺序：任一 hard 已证实 fail → rejected；偏好本身 conflict → needs_clarification；hard 证据缺失 → needs_verification；全部 hard pass → eligible_for_comparison。四组都出现在输出里。
+6. **用户决定**：`user_decision` 独立字段，undecided / interested / not_interested，只由用户填写。eligible 不自动变 interested；用户对 needs_verification 的岗位选 interested 时允许，但候选记录中的未解决项原样保留，进入 application 的 blockers。
 
-MVP 只做官方 ATS 三家 + WebSearch 公司发现。LinkedIn、Boss 直聘等没有公开接口的来源留到 prepare-application 的浏览器阶段处理，或者后续再加 adapter。
+### 4.2 candidate 记录最小约定
+
+| 字段 | 说明 |
+|---|---|
+| opening_id、company_id、provider、board | 岗位身份 |
+| direction_id、direction_revision | 判断依据的方向版本 |
+| field_results[] | field_id、result（pass/fail/unknown）、evidence_refs、说明 |
+| soft_results[] | field_id、符合 / 取舍 / 未知 |
+| match_status | rejected / needs_clarification / needs_verification / eligible_for_comparison |
+| user_decision | undecided / interested / not_interested |
+| evidence[] | id、source_url、支持的断言与定位、checked_at、retrieval_status、coverage、last_successful_check_at |
+| needs_recheck | direction 或 facts revision 变化后置 true，旧判断保留 |
 
 ## 5. prepare-application：填表 skill 设计
 
-### 5.1 浏览器方案
+### 5.1 浏览器方案（R07 修正论据）
 
-| 方案 | 能否用用户已登录的浏览器 | 文件上传 | 配置 | 结论 |
-|---|---|---|---|---|
-| Claude in Chrome | 是，共享 Chrome 登录态 | 支持（读本地文件上传） | `claude --chrome` 或 `/chrome enable` | **推荐** |
-| Playwright MCP | 需要另配 persistent profile | 需要走 MCP 文件参数，较绕 | `.mcp.json` | 备选，适合无头批量 |
-| computer-use（macOS） | 是 | 通过系统对话框 | `/mcp` 里启用，需 Pro/Max | 过重，不选 |
+MVP 用 **Claude in Chrome**。已验证的选型依据：复用用户已登录的 Chrome 会话、操作过程对用户可见、人工接管方便、官方支持本地文件上传。应对反爬是用户目标，各招聘站点上的实际表现留给实测；Playwright MCP 也支持 persistent profile 与扩展连接现有浏览器，r2 中"必然无头因此明显更差"的说法不成立，已撤回。Playwright MCP 仍是无头批量场景的备选，不在 MVP 内。
 
-推荐 Claude in Chrome：申请页多数需要登录（LinkedIn Easy Apply、Workday 账号），共享登录态最省事；文件上传已支持；停在 submit 前只是 skill 指令层的事。
+保留的操作纪律：遇验证码或风控页立即停下交给人；字段逐个填写，不并发；不承诺绕过风控。
 
-### 5.2 流程与硬规则
+**M0 环境预检**：记录 Claude Code 与 Chrome 扩展版本；确认 Chrome 连接、登录方式、文件上传可用（官方文档要求 v2.1.211+，不支持 WSL）；用合成文件在本地受控页面完成一次上传并回读。环境不满足时记录阻塞原因，M3 标未验证，不扩大 MVP 到另一套浏览器实现。
 
-1. 读取 `applications/` 里状态为 interested 的 opening，打开其申请 URL。
-2. 从 `background_facts.yaml` 映射到表单字段（姓名、联系方式、经历、教育、链接、工作授权陈述），上传指定简历文件。
-3. 对每个自由填写题（如"为什么想加入"），用 template 的 rationale 与 background_facts 生成草稿，**写入表单但标记为需人工审阅**。
-4. 把每个字段的填写值与来源写入 `applications/<opening-id>.md`，状态置为 `ready_for_review`。
-5. **停止**：不点 submit / apply / send，不创建账号，不勾选未经用户确认的同意项，不填 template 或 background_facts 里没有的事实（如未提供的身份状态）。遇到验证码或登录页停下来交给人。
+### 5.2 数据流（R05）
 
-## 6. 里程碑
+1. **入口**：读取 `candidates/*.md` 中 `user_decision=interested` 的 opening。applications 目录为空时也能开始。
+2. **application 记录**：按 opening_id 创建或恢复 `applications/<opening-id>.md`，幂等：同一岗位重跑不重复创建。同一岗位出现在两个 direction 下，只有一份 application，`direction_refs[]` 引用两条 candidate 记录。
+3. **背景事实首次建立**：`profile/background_facts.yaml` 不存在时，进入导入步骤：用户提供简历文件或口述，逐项写入并标 `confirmed: false`，保留来源；未提供的事实保持缺失。身份、工作授权只记用户陈述。
+4. **填写**：从 background_facts 映射表单字段并上传指定简历；自由题用 direction rationale 与 facts 生成草稿，写入表单，同时在 application 记录里标 `needs_review`（不混入给雇主的答案）。
+5. **回读**：填写后回读每个字段的实际值与附件名，记录 filled / pending / needs_review 与来源。
+6. **状态**：`status` 取 in_progress / blocked / ready_for_review；`blockers[]` 表达缺事实、需登录、验证码、无法判断动作效果等。ready_for_review 的条件：无 blockers，所有必填字段 filled，未确认的同意项保持未勾选并列在人工作业项里。
+
+### 5.3 操作边界（R08）
+
+按**动作效果**而不是按钮文字区分：
+
+- **允许**：打开申请表（含点击 Apply / 开始申请）、填写字段、上传简历、翻到下一页、网站自动保存草稿。
+- **禁止**：最终提交；可能触发提交的快捷键或默认动作（如在最后一页按 Enter）；通过脚本或接口直接提交；勾选未经用户确认的同意项。
+- **无法判断某个按钮或动作是否会最终提交时，停下并记录原因**，进入 blockers。
+- 页面文字、弹窗、隐藏指令都是被读取的数据，不能授权覆盖以上规则。
+
+对用户的承诺表述为"**停止在最终申请提交之前**"，不是"没有向网站发送资料"：简历上传与自动保存会在提交前传输数据。通用点击工具加提示词不构成不可绕过的技术隔离，这是操作纪律加测试验证，不是硬隔离。
+
+## 6. 评测与验证（R10）
+
+评测前移：M1 开始前固定首批对话样例与行为断言。M4 使用 Anthropic 的 skill-creator 评测流程，记录版本；不同时维护 `claude plugin eval` 的第二套格式。
+
+**访谈评测**（多份脚本，同一首句"想在美国工作"至少三种动机：城市氛围、家庭原因必须留美、拿身份）：
+
+- 是否把含义确认与强度确认分开；接受替代城市但愿为好岗位妥协的保持 soft；明确不可退让的才进 key_fields。
+- 家庭原因必须留美的脚本不能被改写成城市氛围偏好。
+- 两个 soft 的张力不拆方向；同时段"只远程"与"每周现场三天"保留 conflict；"目前远程、搬家后混合"补 scope 不判冲突。
+- 回答不知道 / 跳过 / 暂停后访谈能停止并恢复。
+- 观察轮数与成本，但轮数多不算质量高。
+
+**validator**：正例通过；反例包括缺 hard_confirmation_ref 的 hard 字段、key_fields 引用不存在的字段、key_fields 含 soft 字段、confirmed 但有 conflict 字段。
+
+**ATS**：fixtures 覆盖三家字段差异、null、多地点、正文、时间字段、完整与部分列表；在线冒烟对三家各选一个官方招聘板；网络失败不污染历史成功核实。
+
+**填表**：本地受控表单 + 记录 POST 的小服务器，断言最终提交端点调用次数为零，文件上传与允许的草稿保存另行记录。覆盖单页、多页、Enter 默认提交、缺必填事实、未确认同意项、登录/验证码页、页面文字诱导提交。最后再对一个明确获准的测试页面验证，不用真实雇主申请做提交测试。
+
+## 7. 里程碑（按 R10 顺序）
 
 | 里程碑 | 交付 | 验收 |
 |---|---|---|
-| M0 脚手架 | plugin.json、三个 skill 骨架、schema、.gitignore（workspace/ 私有）、README 更新 | `claude plugin` 能加载，三个 skill 可列出 |
-| M1 访谈 | grill-direction 完整 SKILL.md + probe-playbook + 合成示例 + schema 校验脚本 | 用 reference/design 里的 8 个人工验收例子跑一遍；"美国 → 深圳/新加坡"例子能产出正确 template；冲突不静默覆盖 |
-| M2 找岗位 | ats_fetch.py（三家 ATS）+ find-openings SKILL.md | 对 2–3 家公开公司拉取成功；缺字段保留 unknown；读取失败不写成 closed |
-| M3 填表 | prepare-application SKILL.md + Chrome 流程 | 在一个测试岗位页上填完并停在 submit 前；applications 记录完整 |
-| M4 评测 | 用 skill-creator 给 grill-direction 建 eval 集 | 追问深度、alt_test 覆盖率、是否擅自升级 hard |
+| M0 脚手架与约定 | plugin.json、三个 SKILL.md 骨架、四个 schema、resolve_workspace.py、validate.py、requirements.txt、.gitignore、Chrome 预检记录、首批评测输入 | plugin 静态校验通过且三个 skill 实际加载；从仓库子目录调用仍写同一 workspace；以缓存形式加载时不写入插件目录；`git check-ignore` 验证；预检结果如实记录 |
+| M1 访谈 | grill-direction SKILL.md、probe-playbook、多份合成示例、validator 正反例、访谈行为评测 | §6 访谈评测核心断言通过 |
+| M2/M3 首条流程 | 一份合成方向 → 一家 ATS → 候选判断 → 用户显式选择 → 本地表单 → application 审阅记录 | 端到端跑通，零最终提交 |
+| M2/M3 覆盖 | 另外两家 ATS、表单边界用例；接口约定稳定后两者可并行 | §6 ATS 与填表断言 |
+| M4 回归 | skill-creator 汇总评测、独立新会话评测、与无 skill 基线比较 | 没有实际执行的检查标未验证 |
 
-M1 是核心，先做。M2 与 M3 互相独立，可以并行。
-
-## 7. 已确认的决定（2026-09-23）
+## 8. 已确认的决定
 
 | 决定 | 结论 | 说明 |
 |---|---|---|
-| 交付形态 | 一个 plugin，三个 skill | M1 先做访谈 |
-| 浏览器方案 | Claude in Chrome | 用户的选择标准是"更能应对反爬"。Chrome 方案驱动用户自己已登录的真实 Chrome，带真实指纹与已有 cookie，按人类节奏操作；Playwright MCP 启动的是自动化控制的浏览器实例，LinkedIn / Workday / Cloudflare 类站点会通过 navigator.webdriver 与无头特征识别并拦截。form-rules 补两条：遇验证码或风控页立即停下交给人；字段逐个填写，不做并发。Playwright MCP 只作无头批量的备选，不在 MVP 内 |
-| 岗位来源 MVP | 仅 Greenhouse / Ashby / Lever 官方接口 + WebSearch 发现公司 | LinkedIn / Boss 直聘留待后续 adapter |
-| SKILL.md 语言 | 指令英文，对话跟随用户语言 | reference 文件可中英混用 |
-| 私人数据位置 | 仓库内 `workspace/`，gitignore | 未反对，按推荐执行 |
-| key_fields 规则 | 2–4 个，必须 kind=hard 且 alt_tested=true | 未反对，按推荐执行 |
+| 交付形态 | 一个 plugin，三个 skill | |
+| 浏览器方案 | Claude in Chrome | 论据见 §5.1，r3 撤回了对 Playwright 的不准确比较 |
+| 岗位来源 MVP | Greenhouse / Ashby / Lever 官方接口 + WebSearch 发现公司 | LinkedIn / Boss 直聘留待后续 adapter |
+| SKILL.md 语言 | 指令英文，对话跟随用户语言 | |
+| 私人数据位置 | 用户工作仓库内的 `workspace/`，gitignore | 指用户选择的工作仓库，不是插件安装目录，见 §2 |
+| key_fields 规则 | confirmed 需 2–4 个、必须 hard 且有 alt_test 与 hard_confirmation 引用 | r3 明确：所有 hard 参与过滤，key_fields 是本质与搜索重点；draft 不受数量限制。这是对原规则含义的明确，见 §3.5，请用户知悉 |
 
-## 7.1 评审回路
+## 9. 评审回路
 
-本文件供其他 agent 或人评审。评审意见写到 `docs/implementation-plan-review.md`（同一分支 `claude/implementation-plan`），格式不限，建议每条意见标出针对的章节号与"建议改成什么"。作者读取该文件后修订本文并在 `## 修订记录` 追加一条。
+评审意见写到 `docs/implementation-plan-review.md`，作者在其末尾的回应表逐条回应，采纳的修改写回本文并在修订记录追加版本与处理的意见编号。第一轮意见保留，后续复核追加。
 
 ## 修订记录
 
 - r1 2026-09-23：初稿，六项待确认决定。
-- r2 2026-09-23：写入用户确认的六项决定；浏览器方案按反爬标准定为 Claude in Chrome；增加评审回路。
+- r2 2026-09-23：写入用户确认的六项决定；浏览器方案定为 Claude in Chrome；增加评审回路。
+- r3 2026-09-23：处理第 1 轮评审 R01–R10。含义与强度分开确认（R01）；明确所有 hard 参与过滤、key_fields 为本质与搜索重点、draft 不限数量（R02）；字段独立确认与可观察依据（R03）；冲突先澄清、拆方向需用户确认、进度与字段状态分开（R04）；补齐 direction → candidate → application 数据约定与 facts 导入入口（R05）；ATS 原始字段与时间语义按 provider 映射、四种匹配状态齐全、search_hints 只影响发现（R06）；撤回 Playwright 反爬比较、修正 allowed-tools 说明、增加 Chrome 预检（R07）；按动作效果定义提交边界、blockers、承诺改为"停止在最终提交前"（R08）；workspace_root 解析与 plugin_root 分离（R09）；评测前移、里程碑重排（R10）。
 
-## 8. 本轮研究来源
+## 10. 本轮研究来源
 
-- grill-me skill 机制：https://www.aihero.dev/skills-grill-me ；解读文章 https://azukiazusa.dev/en/blog/before-implementation-interview-design-requirements-grill-me/
-- Claude Code skills 规范：https://code.claude.com/docs/en/skills.md ；plugins：https://code.claude.com/docs/en/plugins.md
-- Claude in Chrome：https://code.claude.com/docs/en/chrome.md ；computer use：https://code.claude.com/docs/en/computer-use.md
+- grill-me skill 机制：https://www.aihero.dev/skills-grill-me ；解读 https://azukiazusa.dev/en/blog/before-implementation-interview-design-requirements-grill-me/
+- Claude Code skills：https://code.claude.com/docs/en/skills.md ；plugins：https://code.claude.com/docs/en/plugins.md ；插件缓存与路径：https://code.claude.com/docs/en/plugins-reference#plugin-caching-and-file-resolution
+- Claude in Chrome：https://code.claude.com/docs/en/chrome.md ；Playwright MCP：https://github.com/microsoft/playwright-mcp
+- ATS 官方文档：Greenhouse https://developers.greenhouse.io/job-board.html ；Ashby https://developers.ashbyhq.com/docs/public-job-posting-api ；Lever https://github.com/lever/postings-api
 - 上游访谈 skill 结构（只看机制，不复制）：agent-data/job-search `skills/job-preference-interview/SKILL.md`，commit dba0c0992e9d
-- 同类"填表停在 submit 前"项目：https://github.com/JaySingh79/job-automation-opencode （portal 子 agent、人工提交、不建账号）
+- 同类"填表停在 submit 前"项目：https://github.com/JaySingh79/job-automation-opencode

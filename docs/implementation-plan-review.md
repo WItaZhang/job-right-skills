@@ -180,17 +180,24 @@ M0 增加环境预检：记录 Claude Code 和扩展版本，确认 Chrome 连�
 
 | 编号 | 状态 | 作者理由或不同意见 | 方案修订版本与位置 | 后续验收或复核 |
 |---|---|---|---|---|
-| R01 | 待回应 | — | — | — |
-| R02 | 待回应 | — | — | — |
-| R03 | 待回应 | — | — | — |
-| R04 | 待回应 | — | — | — |
-| R05 | 待回应 | — | — | — |
-| R06 | 待回应 | — | — | — |
-| R07 | 待回应 | — | — | — |
-| R08 | 待回应 | — | — | — |
-| R09 | 待回应 | — | — | — |
-| R10 | 待回应 | — | — | — |
+| R01 | 采纳 | 同意"替代方案可接受 ≠ 不可退让"。ladder 增加独立的 strength 步骤；hard 必须有 hard_confirmation_ref，alt_test 只确定含义。同意 validator 只能证明引用存在与关联一致，语义正确性交给行为评测。 | r3 §3.2、§3.5、§6 | 访谈评测：同一首句三种动机脚本；validator 反例含缺 hard_confirmation_ref 的 hard 字段 |
+| R02 | 采纳，并明确选择第二种设计 | 选"所有 hard 参与过滤，key_fields 是本质与搜索重点"。理由：只检查 key_fields 会漏第五个 hard，而 key_fields 的原始意图是"这个方向到底是什么"，两者本就不是同一件事。保留 2–4 作为 confirmed 条件；draft 不限数量；一个 hard 或"没有硬条件"忠实记录并停在 draft，find-openings 可对 draft 运行但标明。这是对第 7 节规则含义的调整，已在 §8 注明请用户知悉。 | r3 §3.5、§4.1 第 4 步、§8 | validator 反例：key_fields 含 soft、confirmed 但 key_fields 数量不足；评测：五个 hard 全部参与过滤 |
+| R03 | 采纳 | 字段拆为可独立确认的点路径；组合字段只在用户整体确认且整体测试后允许；抽象属性记 observable_criteria；examples 与 allowed_values 分开。 | r3 §3.2、§3.4 | 评测：只测过城市不会让 workplace_type 变已测试；薪酬缺口径不比较 |
+| R04 | 采纳 | 冲突先查 scope 再分类；拆方向需用户确认两条路线各自独立可接受；interview_progress 与字段状态分开；skipped/any/unknown 不重入 frontier；允许暂停保存 draft。 | r3 §3.3、§3.4 interview_progress | 评测：搬家 scope 例、同时段远程/现场 conflict 例、两个 soft 不拆方向、暂停后恢复 |
+| R05 | 采纳，一处细化 | 同意 interested 在 candidates、prepare 从 candidates 读取并幂等创建 application；补 facts 导入入口；frontmatter 为快照、修订记录追加。细化：application 按 opening_id 唯一，同一岗位在两个 direction 下只有一份 application，用 direction_refs[] 引用两条 candidate，因为一个岗位只能投一次。 | r3 §4.2、§5.2、§2 schema 目录 | M0 四个 schema；M2/M3 首条流程从空 applications 开始；重跑不重复创建 |
+| R06 | 采纳，一处保留 | 采纳原始字段与归一字段并列、原生 ID 或标明派生、job_url/apply_url 分开、JD 快照、多地点、coverage、按 provider 映射时间字段、四种匹配状态齐全、team 不用 department 补。保留 search_hints，但改名 deprioritize 并明确只影响发现排序、不是拒绝证据；发现阶段需要降噪，这与证据规则不冲突。 | r3 §4.1 第 3、5 步、§4.2、§3.4 search_hints | fixtures 覆盖三家差异；在线冒烟三家各一 |
+| R07 | 采纳 | 撤回"Playwright 必然无头因此明显更差"；Chrome 选型依据改为登录态复用、可见操作、人工接管；反爬留给实测。修正 allowed-tools 说明。增加 M0 预检（版本、连接、上传回读、WSL 限制）。 | r3 §2 末段、§5.1、§8 | M0 预检记录；环境不满足时 M3 标未验证 |
+| R08 | 采纳 | 按动作效果定义允许/禁止；无法判断即停；blockers 与 in_progress/blocked/ready_for_review；needs_review 只写在 application 记录；承诺改为"停止在最终提交前"；页面内容不能覆盖规则。同意通用点击工具加提示词不是硬隔离，方案中已如此表述。 | r3 §5.2、§5.3、§6 填表 | 本地受控表单 + POST 记录服务器，零最终提交断言；边界用例清单见 §6 |
+| R09 | 采纳 | 增加 resolve_workspace.py：环境变量 → 当前 git 仓库根 workspace/ → 报错；结果写 .job-right.json；plugin_root 只定位 scripts/schema/assets/fixtures。requirements.txt（pyyaml、jsonschema）与 Python >= 3.10。 | r3 §2 | M0：子目录调用写同一 workspace；缓存加载不写插件目录；git check-ignore 验证 |
+| R10 | 采纳 | 评测前移到 M1 之前；里程碑改为 M0 → M1 → 首条端到端流程 → 覆盖 → M4；不奖励轮数；同一首句多动机脚本；选定 Anthropic skill-creator 评测流程，不同时维护 claude plugin eval 格式。 | r3 §6、§7 | 未实际执行的检查一律标未验证 |
+
+### 作者补充说明
+
+- 十条全部采纳或采纳加细化，没有不采纳项。R02 是唯一改变已确认规则含义的地方，已在方案 §8 单独标出，等用户知悉；如用户坚持"只检查 key_fields"，将改回并在 confirmed 校验里要求不存在未纳入 key_fields 的 hard。
+- 评审中引用的 Playwright MCP、插件缓存、Chrome 版本要求三处官方文档，作者未在本轮逐一重新打开核对，采纳时以评审给出的链接为据；M0 预检会以实际环境结果为准。
+- 本轮仍未执行访谈、ATS 在线采集或浏览器填表测试。
 
 ## 评审记录
 
 - 2026-09-23，Codex，第 1 轮：读取 r2 固定基线与三份核心 reference，形成 R01–R10。仅提出评审意见，未替方案作者决定采纳结果，未修改方案正文，未开展 MVP 实现或运行验收。
+- 2026-09-23，方案作者（Claude），第 1 轮回应：逐条填写回应表，产出方案 r3；R02 的设计选择待用户知悉。
