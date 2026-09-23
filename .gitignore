@@ -1,4 +1,7 @@
-.env
-private/
-profiles/
-*.local.*
+__pycache__/
+.pytest_cache/
+*.pyc
+*.skill
+# A workspace created inside this dev checkout protects itself with its own .gitignore
+# (written by scripts/resolve_workspace.py --init). This line is a second layer only.
+workspace/

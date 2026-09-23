@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/WItaZhang/job-right-skills/schema/application.schema.json",
+  "title": "Application preparation record",
+  "description": "One record per opening_id. Tracks what was filled, from which confirmed fact, what is blocked and what awaits human review. ready_for_review means the assistant finished everything it was permitted and able to do and the remaining human checklist is explicit; it does not mean the form is ready to submit. Final submission is never performed by the assistant.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["opening_id", "status", "candidate_refs", "primary_direction", "facts_revision", "created_at", "updated_at", "fields", "blockers", "review_items"],
+  "properties": {
+    "opening_id": { "type": "string", "minLength": 1 },
+    "status": {
+      "type": "string",
+      "enum": ["in_progress", "blocked", "ready_for_review", "submitted_by_user", "abandoned_by_user"]
+    },
+    "candidate_refs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["direction_id", "direction_revision"],
+        "properties": {
+          "direction_id": { "type": "string", "pattern": "^dir-[0-9]{3,}$" },
+          "direction_revision": { "type": "integer", "minimum": 1 }
+        }
+      }
+    },
+    "primary_direction": {
+      "type": "string",
+      "pattern": "^dir-[0-9]{3,}$",
+      "description": "The one direction whose rationale is used for narrative answers. Chosen from where the user selected the opening; asked only when ambiguous."
+    },
+    "facts_revision": { "type": "integer", "minimum": 1 },
+    "resume_version": { "type": ["string", "null"] },
+    "apply_url": { "type": "string" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" },
+    "fields": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["label", "fill_status", "review_status"],
+        "properties": {
+          "label": { "type": "string" },
+          "form_locator": { "type": "string" },
+          "fill_status": { "type": "string", "enum": ["filled", "pending", "skipped"] },
+          "review_status": { "type": "string", "enum": ["none", "needs_review", "reviewed"] },
+          "value_readback": { "description": "Value read back from the form after filling. Private." },
+          "source": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind"],
+            "properties": {
+              "kind": { "type": "string", "enum": ["fact", "direction_rationale", "generated_draft", "document", "user_input"] },
+              "ref": { "type": "string", "description": "F-xxx fact id, dir-xxx id, document id, or other private pointer." }
+            }
+          },
+          "required_by_form": { "type": "boolean" },
+          "note": { "type": "string" }
+        }
+      }
+    },
+    "blockers": {
+      "type": "array",
+      "description": "Items that stop the assistant from continuing. A missing fact that affects a required answer belongs here, never in review_items.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "detail"],
+        "properties": {
+          "kind": { "type": "string", "enum": ["login_required", "registration_required", "captcha", "missing_required_fact", "unknown_action_effect", "opening_not_open", "other"] },
+          "detail": { "type": "string" },
+          "raised_at": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "review_items": {
+      "type": "array",
+      "description": "Items waiting for the human: drafted free-text answers, consent boxes the human must tick, clearly listed evidence gaps.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "detail"],
+        "properties": {
+          "kind": { "type": "string", "enum": ["free_text_draft", "consent_checkbox", "evidence_gap", "other"] },
+          "detail": { "type": "string" },
+          "field_label": { "type": "string" }
+        }
+      }
+    },
+    "user_outcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reported_by_user", "reported_at"],
+      "properties": {
+        "reported_by_user": { "type": "string", "enum": ["submitted", "abandoned"] },
+        "reported_at": { "type": "string", "format": "date-time" },
+        "note": { "type": "string" }
+      }
+    }
+  }
+}

@@ -104,7 +104,7 @@ workspace 目录结构：
 
 **冲突处理**：发现两条要求不一致时，先检查时间、地点、角色 scope 是否相同 → 不同 scope 则补齐 scope 而非判冲突 → 同 scope 再区分：两个 hard 不可同时满足（阻塞冲突，标 conflict，问一个能改变判断的最小问题）／soft 取舍（记录取舍，不判自相矛盾）／用户接受的备选路线。**只有用户明确确认两条路线可以各自独立接受时，才拆成两份 template**；拆分不是消除冲突的自动手段，也不能把用户要求的 A AND B 变成 A OR B。
 
-**进度与字段状态分开**：访谈进度记录每个维度是 not_asked / asked；字段状态记录 confirmed / unknown / skipped / any / conflict。frontier 为空且仍有 not_asked 维度时才主动开新维度；已问过但回答 unknown 或 skipped 的不重开，除非新信息使原问题重新有意义。
+**进度与字段状态分开**：访谈进度记录每个维度是 not_asked / asked；字段状态用 §3.2 的 status 枚举记录：confirmed / pending / conflict / skipped / unknown（kind=any 表示"无偏好"，是 kind 不是 status）。frontier 为空且仍有 not_asked 维度时才主动开新维度；已问过但回答 unknown 或 skipped 的不重开，除非新信息使原问题重新有意义。
 
 **停止**：用户要求暂停，或当前范围内的 frontier 为空，即可保存 draft 并停止。confirmed 另有校验条件（§3.5），不要求为了结束访谈填满所有维度。draft 可以恢复继续。
 
@@ -112,13 +112,13 @@ workspace 目录结构：
 
 Markdown 文件。**frontmatter 是当前 revision 的快照**；正文 `## 追问链` 记录每条 ladder 的引用内容，`## 修订记录` 追加旧值、新值、原因、来源。不在同一 YAML mapping 里重复追加同名键。
 
-合成示例（完整回答链下的预期，不是所有"想去美国"输入的固定答案）：
+合成示例（完整回答链下的预期，不是所有"想去美国"输入的固定答案）。示例末尾含一个 status=pending 的 hard 字段，因此按 §3.5 整体只能是 draft；同一方向去掉该字段或把它确认后的 confirmed 版本见 `skills/grill-direction/assets/example-synthetic-city-profile.md`：
 
 ```yaml
 id: dir-001
 title: 年轻科技聚集城市里的中型 AI infra 公司，做 IC
 revision: 3
-status: confirmed                # draft | confirmed
+status: draft                    # draft | confirmed；此例因含 pending hard 而为 draft
 created_at: 2026-09-23T10:00:00+08:00
 key_fields: [location.city_profile, role.nature, company.size]
 fields:
@@ -326,6 +326,7 @@ MVP 用 **Claude in Chrome**。已验证的选型依据：复用用户已登录�
 
 - r1 2026-09-23：初稿，六项待确认决定。
 - r2 2026-09-23：写入用户确认的六项决定；浏览器方案定为 Claude in Chrome；增加评审回路。
+- r4.1 2026-09-23：第 3 轮复核指出的两处一致性修正：§3.3 字段状态枚举改为与 §3.2 一致（confirmed / pending / conflict / skipped / unknown，any 属于 kind）；§3.4 示例因含 pending hard 改标 draft，confirmed 版本移至 skill assets。M0/M1 实现见 [m0-m1-report.md](m0-m1-report.md)。
 - r4 2026-09-23：处理第 2 轮评审 R11–R17。事实导入后需回读确认，只有 confirmed 事实进表单，禁止项恢复"不创建账号"（R11）；kind 与 status 分开，过滤只用"适用的已确认 hard"，零 hard 不得 eligible，draft 有独立校验入口与 exploratory 标记（R12）；candidate 记 opening_status、freshness、facts_revision，prepare 入口先复核，复核触发扩展（R13）；workspace 自带 .gitignore，会话内持有 workspace_root，目录切换先提示，拒绝缓存路径，开发 checkout 规则写明，措辞改为"可能被复制进缓存"（R14）；fill_status 与 review_status 分开，blockers 与 review_items 分开，ready_for_review 重新定义（R15）；primary_direction、人工结果记录、去重措辞修正（R16）；Lever 时间字段置 null，boards 观察记录独立目录（R17）；§1 措辞同步；§6 与 M0 补对应反例。
 - r3 2026-09-23：处理第 1 轮评审 R01–R10。含义与强度分开确认（R01）；明确所有 hard 参与过滤、key_fields 为本质与搜索重点、draft 不限数量（R02）；字段独立确认与可观察依据（R03）；冲突先澄清、拆方向需用户确认、进度与字段状态分开（R04）；补齐 direction → candidate → application 数据约定与 facts 导入入口（R05）；ATS 原始字段与时间语义按 provider 映射、四种匹配状态齐全、search_hints 只影响发现（R06）；撤回 Playwright 反爬比较、修正 allowed-tools 说明、增加 Chrome 预检（R07）；按动作效果定义提交边界、blockers、承诺改为"停止在最终提交前"（R08）；workspace_root 解析与 plugin_root 分离（R09）；评测前移、里程碑重排（R10）。
 

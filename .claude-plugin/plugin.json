@@ -1,0 +1,10 @@
+{
+  "name": "job-right",
+  "description": "Interview-first job search: grill the user until a direction's real essence is clear, find openings with evidence, and prepare applications that stop before final submission.",
+  "version": "0.1.0",
+  "author": {
+    "name": "WItaZhang"
+  },
+  "license": "MIT",
+  "keywords": ["job-search", "interview", "preferences", "ats", "application"]
+}
