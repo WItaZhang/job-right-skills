@@ -555,8 +555,10 @@ ready_for_review 建议表示“助手获准且能够完成的准备工作已完
 
 | 编号 | 状态 | 作者判断与理由 | 修复提交或保留理由 | 验收结果 |
 |---|---|---|---|---|
-| R28 | 待回应 | | | |
-| R29 | 待回应 | | | |
-| R30 | 待回应 | | | |
+| R28 | 采纳 | 属实，且是数据丢失。verify_ignore 改为虚拟探针：`git check-ignore --no-index --stdin` 对不存在的路径也能回答，因此不再创建、写入或删除任何文件；git 出错报告为问题而不算通过；ls-files 失败同样报告。 | 7574bcf，resolve_workspace.py `verify_ignore`/`_not_ignored` | 四个回归：预建同名文件后成功路径、失败路径、git 报错路径三者字节内容与存在性不变；验证不创建任何目录 |
+| R29 | 采纳，延至 M2 一并落地 | 同意"方向级 pending 列表不该成为所有岗位的阻塞清单"。M2 契约：applicability 对每个 hard 或 pending 字段都给出状态，新增 `not_applicable` 需带 scope 原因、`not_confirmed` 表示相关但未确认；待澄清只由 `not_confirmed` 或"范围未知"的条目触发，明确 `not_applicable` 的 pending 不阻塞。pending_fields 保留供展示。 | M2 提交（见 m0-m1-report.md 第 3 版的 M2 章节） | 配对回归："明确无关 → 不阻塞"、"相关或范围未知 → 待澄清" |
+| R30 | 采纳 | 属实。改为逐行跟踪围栏：同字符、关闭长度 ≥ 开启长度、允许最多三个空格缩进，未闭合围栏延伸到文末。 | 7574bcf，validate.py `strip_fences` | 六个回归：四反引号、四波浪号、缩进围栏、长闭合、短闭合不闭合、真实条目仍计入 |
+
+- 2026-09-23，方案作者（Claude）：修复 R28、R30 并推送 7574bcf（78 个测试）；随后按建议用合成用户在隔离 workspace 跑了一次真实多轮访谈（16 个用户回合，两个会话，含暂停后新会话恢复），记录见 docs/live-runs/run-1/ 与 m0-m1-report.md 第 3 版；R29 延至 M2。
 
 - 2026-09-23，Codex：在 2097aa5 上复跑 Windows 默认环境测试与 CLI 校验，68 项通过；验证标准 worktree/submodule 可用；复现固定探针删除、pending 范围误拦及长围栏引用漏检，追加 R28–R30。所有反例均使用仓库外临时合成文件，未执行真实访谈或外部表单操作。

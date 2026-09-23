@@ -132,6 +132,19 @@ def test_draft_keeps_pending_hard_without_strength_ref(tmp_path):
     assert validate.validate_direction(write(tmp_path, fm, body)) == []
 
 
+def test_alt_test_ref_must_differ_from_source_ref(tmp_path):
+    """Observed in live run 1: the model cited the user's own statement as the alternative test."""
+    fm, body = load(CONFIRMED)
+    fm["fields"]["role.nature"]["alt_test_ref"] = fm["fields"]["role.nature"]["source_ref"]
+    assert has(validate.validate_direction(write(tmp_path, fm, body)), "role.nature: alt_test_ref equals source_ref")
+
+
+def test_hard_confirmation_ref_must_differ_from_source_ref(tmp_path):
+    fm, body = load(CONFIRMED)
+    fm["fields"]["role.nature"]["hard_confirmation_ref"] = fm["fields"]["role.nature"]["source_ref"]
+    assert has(validate.validate_direction(write(tmp_path, fm, body)), "role.nature: hard_confirmation_ref equals source_ref")
+
+
 # ======================================== direction: reference integrity (R01, R24)
 
 def test_ref_missing_from_chain_is_rejected(tmp_path):

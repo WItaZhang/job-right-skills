@@ -201,6 +201,15 @@ def field_rules(fm: dict, refs_defined: set[str]) -> list[str]:
             ref = f.get(key)
             if ref and ref not in refs_defined:
                 problems.append(f"{fid}.{key}: {ref} is not defined in ## {CHAIN_TITLE}")
+        if f.get("alt_test_ref") and f.get("alt_test_ref") == f.get("source_ref"):
+            problems.append(
+                f"{fid}: alt_test_ref equals source_ref ({f['source_ref']}); an alternative test is a separate exchange "
+                "where the interviewer offered a different option, not the user's original statement"
+            )
+        if f.get("hard_confirmation_ref") and f.get("hard_confirmation_ref") == f.get("source_ref"):
+            problems.append(
+                f"{fid}: hard_confirmation_ref equals source_ref ({f['source_ref']}); strength must be confirmed in its own exchange"
+            )
         if f["kind"] == "hard" and f["status"] == "confirmed" and not f.get("hard_confirmation_ref"):
             problems.append(
                 f"{fid}: kind=hard with status=confirmed but no hard_confirmation_ref; "

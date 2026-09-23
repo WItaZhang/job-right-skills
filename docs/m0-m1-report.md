@@ -80,3 +80,35 @@ $ python3 scripts/validate.py direction skills/grill-direction/assets/example-sy
 2. `verify_ignore` 会在 workspace 内临时写探针文件再删除；在只读或受同步软件监控的目录里是否合适。
 3. R23 的开发例外要求 plugin_root 是 git 顶层；用 git worktree 或 submodule 方式开发时可能误拒。
 4. 重复键拒绝对用户手工编辑的容忍度：报错只给行号，是否需要更友好的修复提示。
+
+---
+
+# 第 3 版补充：M1 真实多轮访谈（run 1）
+
+日期：2026-09-23。按 Codex 建议，在修复 R28/R30 后用合成用户在隔离 workspace（`JOB_RIGHT_WORKSPACE=/tmp/jr-live-1`，仓库外）实际调用 `/job-right:grill-direction`。驱动方式：`claude -p --plugin-dir . --session-id/--resume`，每个用户回合一次调用；合成用户的回答由作者按预设人物卡给出。完整对话与最终文件见 [docs/live-runs/run-1/](live-runs/run-1/)。
+
+**人物卡（合成）**：首句"想去美国做 AI"；真实动机是年轻科技城市氛围但**愿为好内容妥协**（应落 soft）；真正底线是底层系统方向与 IC；公司规模选择"跳过"；薪酬"不知道"；第 13 回合暂停，之后在**新会话**中恢复。
+
+| 检查项 | 结果 | 证据 |
+|---|---|---|
+| 不把偏好擅自升级为硬条件 | **通过** | 城市氛围在第 5 回合用 A/B 对比情境测强度，用户说"看情况"，落 `kind: soft`；最终文件中仍为 soft |
+| 替代方案测试改变了字段含义 | **通过** | 第 7 回合主动用"数据库内核、分布式存储"测"AI 是否必须"，用户接受后 `role.domain` 写成"底层系统/性能规模化"，AI 降为 example |
+| 硬条件有独立强度确认 | **通过** | `role.domain` hard_confirmation_ref=I-009（第 9 回合"会直接拒绝"）；`role.people_management` hard_confirmation_ref=I-012 |
+| 追问到底而不是接受结论 | **通过** | 第 2 回合把"机会多"识别为结论继续追；第 10 回合把"应用层内容"与"业务拉扯"拆成两个字段分别确认 |
+| 定期回读 | **部分通过** | 第 10 回合才第一次回读，晚于 SKILL.md 的 4–5 轮；回读内容准确并被用户确认 |
+| 跳过 / 不知道 分别记录且不重问 | **通过** | company.size status=skipped，compensation.floor status=unknown；恢复后未重问 |
+| 暂停保存草稿 | **通过** | 第 13 回合保存 draft、运行 validator、报告状态与下一问 |
+| 新会话从文件恢复 | **通过** | 第 14 回合新 session 读取 dir-001.md，直接问上次未答的 workplace_type 问题 |
+| 确认前运行 validator | **通过** | 第 16 回合确认前运行 validate.py，两个 key_fields 均有 alt_test 与 hard_confirmation 引用 |
+| 一条消息一个问题 | **一处违反** | 第 6 回合把"什么吸引你"与"应用层为什么不行"合在一条消息 |
+| alt_test 是访谈者提供的替代项 | **一处违反** | `role.people_management.alt_test_ref=I-011` 与 source_ref 相同：用户自己说了"tech lead 可以"，模型把它当作替代测试而没有自己再问一次 |
+
+成本：两个会话累计约 1.6 美元（session 1 约 1.21，session 2 约 0.44），用户回合 16 次。
+
+**据此做的三处修改**（本次提交）：
+
+1. validator 新增规则：`alt_test_ref` 或 `hard_confirmation_ref` 与 `source_ref` 相同即拒。用它回验 run 1 的最终文件，正确报出 `role.people_management` 那一处；文件保留原样作为证据。
+2. SKILL.md §3 把回读节奏改为可数的触发条件（第 4 或第 5 个问题前先回读），并注明本次实测滑到第 10 回合。
+3. SKILL.md "Things that go wrong" 新增两条：不能把用户自述当作替代测试；不要把两个问题合在一条消息。
+
+**判断**：M1 的核心语义断言（不升级 hard、含义与强度分开、跳过/未知/暂停/恢复）在这一次真实运行中成立，可以进入 M2。仍未验证的：其他四个 eval 场景（同首句家庭动机、scope 与未证实张力、真冲突）只有定义没有运行；一次运行不能说明稳定性；修改后的 SKILL.md 没有再跑第二次。

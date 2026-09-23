@@ -46,7 +46,7 @@ Keep questions short and specific. Never bundle two questions into one sentence.
 
 ### 3. Read back every 4–5 rounds
 
-Summarize the current draft in plain language: which conditions are looking like hard lines, which are preferences, what is still unknown. Ask them to correct you. Record the readback as an interview entry too.
+Count your rounds. When you reach the fourth or fifth question since the last readback, read back *before* asking anything else: summarize the current draft in plain language, which conditions are looking like hard lines, which are preferences, what is still unknown, and ask them to correct you. Record the readback as an interview entry. In a live run the first readback slipped to round 10; by then a wrong assumption has shaped five questions.
 
 ### 4. Handle conflicts and possible splits carefully
 
@@ -88,6 +88,8 @@ When you stop, tell the user: where the file is, whether it is draft or confirme
 
 ## Things that go wrong
 
+- **Citing the user's own statement as the alternative test.** If the user volunteers a boundary ("tech lead is fine as long as I don't do reviews or hiring"), that is still their statement. The alternative test is *your* offer of a different option and their answer to it. Ask it, record it as its own entry, and cite that entry. The validator rejects an `alt_test_ref` equal to `source_ref`.
+- **Two questions in one message.** "What attracts you to infra, and why didn't the application layer work?" gets a half answer to each. Pick the one whose answer changes the most; ask the other next round.
 - **Upgrading strength by inference.** "Very important to me" is not a hard line until they say they would refuse otherwise. Write `kind: soft` or `kind: unspecified, status: pending` until then.
 - **Turning a rejected alternative into the wrong attribute.** If they refuse Vancouver because their parents are in the US, the attribute is country or reachability, not atmosphere. Follow their reason, not your example.
 - **Bundling fields.** City atmosphere and remote/hybrid are separate fields with separate strengths. Company headcount and funding stage are separate fields. Bundle only what the user bundled and tested as one thing.
