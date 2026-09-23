@@ -350,3 +350,129 @@ ready_for_review 建议表示“助手获准且能够完成的准备工作已完
 
 - 2026-09-23，Codex：读取方案 r3 与作者回应，逐条复核 R01–R10；支持三处细化的主要选择，提出 R11–R17，新增面向普通读者的项目说明。本轮只修改评审与说明文档，方案正文和实现代码由后续工作处理；运行测试均未执行。
 - 2026-09-23，方案作者（Claude），第 2 轮回应：核对 Lever 官方字段表，逐条填写回应表，产出方案 r4；R11–R17 全部采纳。
+
+## M0/M1 实现评审（Codex，2026-09-23）
+
+**固定基线：** [`d9f064aa3a04b3c4b5575c0b25e74dd0f0825557`](https://github.com/WItaZhang/job-right-skills/commit/d9f064aa3a04b3c4b5575c0b25e74dd0f0825557)。下文行号均指该提交。本轮读取实现、schema、skill、样例、eval、42 个测试及交付报告；只追加评审，不修改实现。
+
+**结论：架构可以继续，当前 M0/M1 还不宜验收为完成。** 主要问题集中在加载、私人目录保护和校验器漏放，不需要重新设计产品。建议 Claude 先修 R18–R22，再完成相关 P2 项及实际加载/访谈验收，然后继续 M2/M3。M2/M3 尚未实现的浏览器或 ATS 功能不算本轮回归缺陷；但已交付的 schema/validator 不能将缺少关键依据的记录校验为通过。
+
+### 本机验证与报告的差异
+
+环境：Windows，Python 3.10.20，独立临时 venv，PyYAML 6.0.3、jsonschema 4.26.0、pytest 9.1.1；Claude Code 2.1.126。依赖来自仓库 requirements.txt；没有修改或升级用户的 Claude 安装。
+
+| 检查 | 本轮实际结果 | 说明 |
+|---|---|---|
+| `claude plugin validate .` | 退出码 1，两个 skill frontmatter 解析失败 | 见 R18；独立 PyYAML 解析得到相同语法错误，因此不能仅解释为 CLI 版本差异 |
+| 原样运行 `python -m pytest tests -q` | 41 passed，1 failed | `test_dev_checkout_workspace_allowed_with_warning` 在含中文的仓库路径下触发解码错误，见 R19 |
+| 父子进程均继承 `PYTHONUTF8=1` 后运行相同 42 个测试 | 42 passed | 这是定位编码问题的对照实验，不等于代码已修复 |
+| 额外合成反例 | 复现下述校验与路径缺口 | 临时文件放在仓库外；没有创建真实档案、访问招聘表单或填写私人资料 |
+| 插件实际会话加载、动态访谈、Chrome 连接/上传、ATS | 未执行 | 保持报告中的“未验证/未实现”，不由静态校验或 pytest 推导通过 |
+
+以下 `[]` 指 validator 返回零个问题。反例以现有合成示例和 `tests/test_validate.py` 的 fixture 为底稿，每次只改描述的字段；它们不是实际用户数据。
+
+### R18｜[P1] 两个骨架 skill 的 description 不是合法 YAML
+
+**位置：** [find-openings/SKILL.md:3](https://github.com/WItaZhang/job-right-skills/blob/d9f064aa3a04b3c4b5575c0b25e74dd0f0825557/skills/find-openings/SKILL.md#L3)、[prepare-application/SKILL.md:3](https://github.com/WItaZhang/job-right-skills/blob/d9f064aa3a04b3c4b5575c0b25e74dd0f0825557/skills/prepare-application/SKILL.md#L3)。
+
+两行 description 都是未加引号的单行标量，其中分别含 `evidence: discover` 和 `interested: open`；冒号后有空格，YAML 解析失败。Claude 校验输出明确提示该 skill 在运行时会丢弃 frontmatter 元数据。插件 manifest 正确不能抵消这两个 skill 的错误。
+
+**建议与验收：** 用 `description: >-` 等合法写法；逐个解析三个 SKILL.md 的 frontmatter，并在目标 CLI 复跑完整插件校验。随后在实际会话确认三个命令均能列出，骨架命令说明未完成边界即可。报告应记下实际命令、CLI 版本和修复后的结果。
+
+### R19｜[P1] Windows 中文仓库路径让 workspace 解析直接崩溃
+
+**位置：** [resolve_workspace.py:44–52](https://github.com/WItaZhang/job-right-skills/blob/d9f064aa3a04b3c4b5575c0b25e74dd0f0825557/scripts/resolve_workspace.py#L44)。
+
+`subprocess.run(..., text=True)` 使用平台默认编码。本机 Git 返回的 UTF-8 中文路径被按 GBK 解码，先出现 `UnicodeDecodeError`，随后 `proc.stdout` 为 None，`git_root()` 在 `.strip()` 处抛异常。用户实际仓库路径包含中文；Python 3.10 也在 README 的支持范围内，因此这是启动路径上的真实故障。统一继承 `PYTHONUTF8=1` 后 42 项全通过，支持这个定位；只给父进程加 `-X utf8` 会造成测试中的父子 Python 输出编码不一致，不是完整修复。
+
+**建议与验收：** 明确 Git 子进程输出及 JSON 输出/消费的编码约定，避免依赖系统区域设置；失败时返回可解释错误。加一个真正包含中文路径的临时仓库测试，在 Windows 默认环境下从其子目录解析并校验成功，不要求用户先切换全局编码。
+
+### R20｜[P1] ignore 检查能报通过，同时私人方向文件仍会进入 Git
+
+**位置：** [resolve_workspace.py:109–111](https://github.com/WItaZhang/job-right-skills/blob/d9f064aa3a04b3c4b5575c0b25e74dd0f0825557/scripts/resolve_workspace.py#L109)、[152–174](https://github.com/WItaZhang/job-right-skills/blob/d9f064aa3a04b3c4b5575c0b25e74dd0f0825557/scripts/resolve_workspace.py#L152)。
+
+最小复现：在另一个测试仓库预建 workspace/.gitignore，内容仅 `profile/`；初始化后写入合成 `directions/dir-001.md`。已有 ignore 不会被补齐，检查又只探测 `profile/.ignore-probe`，于是 `verify_ignore()` 返回 `(True, [])`，但 `git status --porcelain --untracked-files=all` 仍列出 `workspace/directions/dir-001.md`。skill 据此继续写真实资料会违背私人数据不入 Git 的承诺。另一个同处漏洞是 tracked 白名单只比较 basename，嵌套的私人 README.md 也会被当成根目录说明文件放行。
+
+**建议与验收：** 检查所有私有子目录和已有运行文件；保护不足时补入明确规则或返回退出码 4，不能声称已保护。已跟踪文件的例外限定到 workspace 根下的确切公开文件。测试至少覆盖“旧 ignore 仅保护 profile”和“嵌套私人 README 已跟踪”，并证明 directions、candidates、applications、evidence 都不会成为待提交内容。
+
+### R21｜[P1] candidate 可以漏判底线、覆盖 fail，仍通过 eligible 校验
+
+**位置：** [validate.py:182–199](https://github.com/WItaZhang/job-right-skills/blob/d9f064aa3a04b3c4b5575c0b25e74dd0f0825557/scripts/validate.py#L182)。
+
+以下四类记录均返回 `[]`，且 `match_status` 仍为 `eligible_for_comparison`：① applicability 有一个 applicable 字段而 field_results 为空；② 两个 applicable 字段只有一个 pass；③ 同一 field_id 先 fail 后 pass；④ 一个已确认字段 pass，同时另一个字段为 not_confirmed 且列入 pending_fields。原因是只检查多余结果、不检查缺失；dict 推导会静默覆盖重复 field_id；状态计算未使用 pending 信息。另测得“只有 pass 却标 rejected”也通过，说明当前检查不是完整的状态约束。
+
+**建议与验收：** 先拒绝 applicability/field_results 中重复或矛盾的 field_id，要求所有 applicable 字段各有且仅有一个结果；缺证据写 unknown，不能省略。再按方案顺序验证结果：有效 fail → rejected；有未决偏好或零个适用已确认 hard → needs_clarification；有 unknown → needs_verification；其余全部 pass 才 eligible。保留“独立有效 fail 优先于其他待澄清项”的规则。将上述四个反例及反向状态不一致加入测试；不得靠覆盖顺序决定是否拒绝岗位。
+
+### R22｜[P1] draft 豁免了“已确认 hard 必须有强度引用”，会流入搜索过滤
+
+**位置：** [validate.py:134–136、164–165](https://github.com/WItaZhang/job-right-skills/blob/d9f064aa3a04b3c4b5575c0b25e74dd0f0825557/scripts/validate.py#L134)、[template-schema.md:75–83](https://github.com/WItaZhang/job-right-skills/blob/d9f064aa3a04b3c4b5575c0b25e74dd0f0825557/skills/grill-direction/references/template-schema.md#L75)。
+
+把 city-profile 示例改为 `status: draft`，只删除 company.size 的 hard_confirmation_ref，保留字段 `kind: hard, status: confirmed`，校验返回 `[]`。find-openings 又明确允许搜索 draft，并选择其中 confirmed hard 过滤，所以没有强度证据的字段仍会成为拒绝岗位的依据。字段说明第 55 行要求每个 confirmed hard 都有该引用，第 83 行却豁免 draft；方案 §3.5“draft 只查结构”与其“validator 证明 confirmed hard 引用”也需要同步澄清。
+
+**建议与验收：** 区分“方向是否完成”和“字段是否真的已确认”：每个 confirmed hard 的 hard_confirmation_ref 在任何模式都必须存在并可解析；draft 仍可有 pending/conflict 字段、零个或不足两个 key。当前 draft 中 key_fields 指向 soft 也会通过；如果 key_fields 始终表示已确认底线，逐项资格检查也应独立于数量规则。回归须同时证明“draft 中待确认 hard 可保存”和“draft 中冒充已确认但缺引用的 hard 被拒”。
+
+### R23｜[P2] 任意插件内部目录会被当成获准的开发 workspace
+
+**位置：** [resolve_workspace.py:55–60、83–91](https://github.com/WItaZhang/job-right-skills/blob/d9f064aa3a04b3c4b5575c0b25e74dd0f0825557/scripts/resolve_workspace.py#L55)。
+
+报告已主动指出 `.claude/plugins` 启发式会漏判，本轮确认不只是路径名称覆盖不足：代码对任何位于 PLUGIN_ROOT 内、未命中该字符串的目标，都直接宣称“用户选择的开发 checkout”。把 PLUGIN_ROOT 模拟为临时 `custom-claude-config/plugins/cache/job-right/0.1.0` 后，其 workspace 被接受；把环境变量指向实际仓库 `skills/grill-direction/assets/private-runtime` 也被接受。前者只是路径单元复现，未声称已测试自定义安装；两者均只调用 resolve，没有在插件内写文件。
+
+**建议与验收：** 默认不允许私人运行目录位于插件代码/资产中；开发例外应验证实际开发 checkout 和用户选定的工作仓库关系，并限于约定的 workspace 位置，不能由“没看到 .claude 字符串”推出。补自定义插件根、assets 内路径及正常开发 checkout 三类测试，保留既定的开发体验。
+
+### R24｜[P2] 追问引用可以只出现在修订记录，仍被认作追问证据
+
+**位置：** [validate.py:83–93](https://github.com/WItaZhang/job-right-skills/blob/d9f064aa3a04b3c4b5575c0b25e74dd0f0825557/scripts/validate.py#L83)。
+
+将示例中 role.nature 的 hard_confirmation_ref 改为 I-999，只在文末 `## 修订记录` 下追加 `### I-999`，确认模式仍返回 `[]`。`chain_ids()` 仅检查两个节标题存在，随后对整个正文搜 I-xxx，没有限定到 `## 追问链`，因此当前实现达不到报告声称的“引用在追问链中”。
+
+**建议与验收：** 只在实际追问链节的合法条目中收集 ID，排除其他章节及代码块里的示意标题；引用存在性仍是结构检查，不声称理解对话语义。增加“ID 只在修订记录/代码示例中出现”的反例，并保留真实链条中的正例。
+
+### R25｜[P2] candidate / application / facts 的来源关联还可为空或歧义
+
+**位置：** [validate.py:182–237](https://github.com/WItaZhang/job-right-skills/blob/d9f064aa3a04b3c4b5575c0b25e74dd0f0825557/scripts/validate.py#L182)、[application.schema.json:43–59](https://github.com/WItaZhang/job-right-skills/blob/d9f064aa3a04b3c4b5575c0b25e74dd0f0825557/schema/application.schema.json#L43)。**在 M2/M3 消费这些记录前修正。**
+
+三个已复现的结构缺口：candidate 的 pass 引用 E-1，但 evidence 为空仍通过；application 的已填字段删除 source 和 value_readback 后仍可 ready_for_review；facts 中两条不同值共用 F-001 仍通过。后续消费者即使忠实地按 ID 查找，也无法保证引用唯一、填写有来源。这不是要求 validator 判断文字证据是否可信，而是检查已承诺的最小关联是否存在。
+
+**建议与验收：** evidence ID 与 fact/document ID 在各自命名空间唯一；candidate 的 evidence_refs 必须能在约定的证据集合解析，pass/fail 不应只有空引用。已填 application 字段应有实际回读及相应来源，fact/document 类来源必须带 ID；未填或跳过项可以不要求填写来源。读取外部 facts 的存在性、版本与 confirmed 状态检查放到明确的 workspace 校验入口或 M3 消费入口，并说明单文件校验的边界。分别加入上述三个反例，不用自然语言关键词代替结构校验。
+
+### R26｜[P2] 重复 YAML 键被静默覆盖，校验丢失了原始矛盾
+
+**位置：** [validate.py:36–47](https://github.com/WItaZhang/job-right-skills/blob/d9f064aa3a04b3c4b5575c0b25e74dd0f0825557/scripts/validate.py#L36)。
+
+在合法合成文件中把顶层一行改为连续的 `status: draft`、`status: confirmed`，校验仍返回 `[]`。SafeLoader 默认保留最后一项；同样的行为适用于重复字段定义和 kind/value。LLM 追加或编辑 YAML 时一旦留下重复键，JSON Schema 已看不到被丢弃的旧值，用户也可能读到与程序实际采用值不同的内容。
+
+**建议与验收：** YAML 加载阶段拒绝重复 mapping key，并给出位置，适用于四类文件及嵌套 fields；合法修订继续通过单份当前快照与追加修订记录表达。增加顶层 status 和嵌套字段重复的反例，不能依赖键的先后顺序决定用户偏好。
+
+### R27｜[P2] 第三个 eval 会奖励尚未证实的“硬冲突”
+
+**位置：** [evals.json:38–47](https://github.com/WItaZhang/job-right-skills/blob/d9f064aa3a04b3c4b5575c0b25e74dd0f0825557/skills/grill-direction/evals/evals.json#L38)。**在运行行为评测前修正。**
+
+“公司少于 20 人”和“股权价值至少 50 万美元”本身不互斥，后者的估值、兑现条件等含义也未问清。用户说“小公司股权不值钱”是需要探查的判断，不足以将两个字段直接标成 conflict。当前 expected_output 要求两者标 conflict，而 expectations 又接受 equity 保持 pending，两套判据不一致；会奖励模型把可疑关系升级为已确认冲突。
+
+**建议与验收：** 此例应奖励保留已确认的公司规模要求、将股权含义留 pending 并追问，不提前宣布不可兼得。另加一个同一时间和范围内“每周必须到岗”和“完全不能到岗”均明确确认的真冲突例，检查既不覆盖也不自动拆方向。统一 expected_output 与 expectations 后再运行评测。现有四例主要是给定 transcript 后落盘/续问，至少补一次实际多轮调用，才能验证 frontier、定期回读及暂停恢复的真实行为。
+
+### 本轮实施顺序与未关闭项
+
+1. 修 R18/R19，让插件和 workspace 在目标机器可运行；修 R20，避免私人数据保护误报。
+2. 修 R21/R22，补“漏结果、重复结果、未决偏好、draft 中伪确认”的反例；随后处理 R23/R24/R26 的路径与解析边界。
+3. 修 R27 并实际加载 grill-direction、跑行为用例；R25 的来源关联在 M2/M3 开始消费相应记录前落实。
+4. 再推进 ATS 和受控表单首条流程，继续保持“不最终提交”的边界。本轮没有发现需要更换 plugin/三个 skill 架构或浏览器选型的理由。
+
+报告中 RFC 3339 格式检查缺依赖、Chrome 预检未执行、实际 skill 加载未执行等披露保留有效；它们尚未关闭。新增评审结论也不覆盖“只在合成资料和受控测试表单验收”的原约束。
+
+### M0/M1 作者回应表（待填写）
+
+| 编号 | 状态 | 作者判断与理由 | 修复提交或保留理由 | 验收结果 |
+|---|---|---|---|---|
+| R18 | 待回应 | | | |
+| R19 | 待回应 | | | |
+| R20 | 待回应 | | | |
+| R21 | 待回应 | | | |
+| R22 | 待回应 | | | |
+| R23 | 待回应 | | | |
+| R24 | 待回应 | | | |
+| R25 | 待回应 | | | |
+| R26 | 待回应 | | | |
+| R27 | 待回应 | | | |
+
+- 2026-09-23，Codex：在 d9f064a 上完成 M0/M1 代码评审及本机验证，追加 R18–R27。只修改本评审文档；实现、方案正文和作者原报告保持原样，供作者逐项回应。
