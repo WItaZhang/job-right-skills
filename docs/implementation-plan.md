@@ -167,14 +167,25 @@ MVP 只做官方 ATS 三家 + WebSearch 公司发现。LinkedIn、Boss 直聘等
 
 M1 是核心，先做。M2 与 M3 互相独立，可以并行。
 
-## 7. 需要你确认的决定
+## 7. 已确认的决定（2026-09-23）
 
-1. **交付形态**：一个 plugin 三个 skill（推荐），还是先只做一个 grill skill 验证想法？
-2. **浏览器方案**：Claude in Chrome（推荐）还是 Playwright MCP？
-3. **岗位来源 MVP 范围**：只做 Greenhouse / Ashby / Lever 官方接口（推荐先做），还是一开始就要 LinkedIn / Boss 直聘（只能走浏览器，不稳定）？
-4. **私人数据位置**：放仓库内 `workspace/` 并 gitignore（推荐，路径固定），还是仓库外目录用环境变量指定？
-5. **SKILL.md 语言**：指令用英文、与用户对话跟随用户语言（推荐，指令遵循更稳），还是全中文？
-6. **key_fields 上限**：建议 2–4 个；是否同意"未做 alt_test 的字段不能进 key_fields"这条硬规则？
+| 决定 | 结论 | 说明 |
+|---|---|---|
+| 交付形态 | 一个 plugin，三个 skill | M1 先做访谈 |
+| 浏览器方案 | Claude in Chrome | 用户的选择标准是"更能应对反爬"。Chrome 方案驱动用户自己已登录的真实 Chrome，带真实指纹与已有 cookie，按人类节奏操作；Playwright MCP 启动的是自动化控制的浏览器实例，LinkedIn / Workday / Cloudflare 类站点会通过 navigator.webdriver 与无头特征识别并拦截。form-rules 补两条：遇验证码或风控页立即停下交给人；字段逐个填写，不做并发。Playwright MCP 只作无头批量的备选，不在 MVP 内 |
+| 岗位来源 MVP | 仅 Greenhouse / Ashby / Lever 官方接口 + WebSearch 发现公司 | LinkedIn / Boss 直聘留待后续 adapter |
+| SKILL.md 语言 | 指令英文，对话跟随用户语言 | reference 文件可中英混用 |
+| 私人数据位置 | 仓库内 `workspace/`，gitignore | 未反对，按推荐执行 |
+| key_fields 规则 | 2–4 个，必须 kind=hard 且 alt_tested=true | 未反对，按推荐执行 |
+
+## 7.1 评审回路
+
+本文件供其他 agent 或人评审。评审意见写到 `docs/implementation-plan-review.md`（同一分支 `claude/implementation-plan`），格式不限，建议每条意见标出针对的章节号与"建议改成什么"。作者读取该文件后修订本文并在 `## 修订记录` 追加一条。
+
+## 修订记录
+
+- r1 2026-09-23：初稿，六项待确认决定。
+- r2 2026-09-23：写入用户确认的六项决定；浏览器方案按反爬标准定为 Claude in Chrome；增加评审回路。
 
 ## 8. 本轮研究来源
 
