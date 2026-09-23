@@ -1,0 +1,55 @@
+{
+  "provider": "lever",
+  "board": "palantir",
+  "company_id": "palantir",
+  "check_id": "20260923T233205Z-077199",
+  "checked_at": "2026-09-23T23:32:05+00:00",
+  "retrieval_status": "success",
+  "coverage": {
+    "pages_requested": 4,
+    "pages_ok": 4,
+    "paginated": true,
+    "complete": true
+  },
+  "postings_seen": 318,
+  "openings_written": 318,
+  "pages": [
+    {
+      "index": 0,
+      "url": "https://api.lever.co/v0/postings/palantir?mode=json&limit=100&skip=0",
+      "status": "success",
+      "http_status": 200,
+      "error": null,
+      "raw": "page-0.raw",
+      "count": 100
+    },
+    {
+      "index": 1,
+      "url": "https://api.lever.co/v0/postings/palantir?mode=json&limit=100&skip=100",
+      "status": "success",
+      "http_status": 200,
+      "error": null,
+      "raw": "page-1.raw",
+      "count": 100
+    },
+    {
+      "index": 2,
+      "url": "https://api.lever.co/v0/postings/palantir?mode=json&limit=100&skip=200",
+      "status": "success",
+      "http_status": 200,
+      "error": null,
+      "raw": "page-2.raw",
+      "count": 100
+    },
+    {
+      "index": 3,
+      "url": "https://api.lever.co/v0/postings/palantir?mode=json&limit=100&skip=300",
+      "status": "success",
+      "http_status": 200,
+      "error": null,
+      "raw": "page-3.raw",
+      "count": 18
+    }
+  ],
+  "note": null
+}

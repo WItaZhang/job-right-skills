@@ -187,7 +187,7 @@ interview_progress:
 
 ### 3.5 key_fields 与 hard 的关系（R02，对第 7 节规则含义的明确）
 
-- **参与过滤的是"适用的已确认 hard"（R12）**：kind=hard、status=confirmed，且 scope 在当前判断范围内（如 valid_from 未到的字段不适用，单独说明排除原因）。status=pending 或 conflict 的 hard 不能作为拒绝依据；它们进入 needs_clarification 的原因列表。
+- **参与过滤的是"适用的已确认 hard"（R12）**：kind=hard、status=confirmed，且 scope 在当前判断范围内（如 valid_from 未到的字段不适用，单独说明排除原因）。status=pending 或 conflict 的字段不能作为拒绝依据。**它们是否让某个岗位待澄清，按岗位逐个判断（R29）**：candidate 的 applicability 必须为方向里每个 hard 字段和每个 pending/conflict 字段给出状态；明确 `not_applicable` 且带 scope 原因的不阻塞该岗位，`not_confirmed`（与该岗位相关但未确认）才触发 needs_clarification；漏列不等于证明无关，validator 报错。方向级 pending_fields 只用于展示。
 - **key_fields 是方向的"本质"**：从已确认 hard 中选出 2–4 个，用于搜索重点、方向标题和向用户解释"这个方向到底是什么"。key_fields ⊆ 已确认 hard。
 - **direction status=confirmed 的条件**：key_fields 数量 2–4；每个 key_field 有 alt_test_ref 与 hard_confirmation_ref；不存在 status=conflict 的字段；不存在 kind=hard 且 status=pending 的字段。
 - **draft 是合法的持久状态**：不受数量限制，允许 pending 与 conflict 字段存在。但"方向是否完成"与"字段是否真的已确认"是两回事（R22）：任何模式下，kind=hard 且 status=confirmed 的字段都必须有 hard_confirmation_ref，key_fields 的每一项都必须是合格的已确认 hard；draft 只豁免数量规则与"不得有 pending hard / conflict"。强度未确认的字段保持 pending，不能冒充 confirmed。两种校验是同一脚本的两个入口。用户只有一个 hard，或说"没有硬条件"，都忠实记录，方向停在 draft。
@@ -218,7 +218,7 @@ interview_progress:
    - 404 / 超时 → retrieval_status=failed、opening_status=unknown，保留 last_successful_check_at；分页不完整 → partial；完整读取零结果 → success 且零结果。
    - **opening_status 与 freshness（R13）**：每次读取更新 opening_status（published_present / explicitly_closed / unknown）与 freshness_status（current / stale / unknown）及 recheck_reason，沿用 reference 的判定表。
 4. **适用性判断先于证据判断（R12）**：先按 §3.5 选出"适用的已确认 hard"，不适用或未确认的字段单独列出排除原因；再对每个适用 hard 做 pass / fail / unknown，绑定 field_id、direction revision、facts revision、evidence 引用；软字段列符合 / 取舍 / 未知。缺正文证据保持 unknown，不凭模型对公司或城市的印象判 pass。薪酬缺币种、期间或 base/total 口径时不比较。
-5. **结果与状态**：match_status 四选一，按 reference 顺序：任一适用已确认 hard 已证实 fail → rejected；偏好本身 conflict / pending，或适用已确认 hard 为零 → needs_clarification；hard 证据缺失 → needs_verification；全部适用 hard pass → eligible_for_comparison。draft 方向的结果另标 `basis: exploratory`。四组都出现在输出里。**匹配通过不等于岗位仍开放**：opening_status 与 match_status 并列展示，旧匹配结果作为历史保留，不重写为今天已核实。
+5. **结果与状态**：match_status 四选一，按 reference 顺序：任一适用已确认 hard 已证实 fail → rejected；applicability 中存在 not_confirmed 条目，或适用已确认 hard 为零 → needs_clarification；hard 证据缺失 → needs_verification；全部适用 hard pass → eligible_for_comparison。draft 方向的结果另标 `basis: exploratory`。四组都出现在输出里。**匹配通过不等于岗位仍开放**：opening_status 与 match_status 并列展示，旧匹配结果作为历史保留，不重写为今天已核实。
 6. **用户决定**：`user_decision` 独立字段，undecided / interested / not_interested，只由用户填写。eligible 不自动变 interested；用户对 needs_verification 的岗位选 interested 时允许，候选记录中的未解决项原样保留，进入 application 的 blockers 或 review_items（§5.2）。
 7. **复核触发（R13）**：direction revision、facts revision、证据变化、上次核实不再适合当前使用、岗位关闭或页面迁移，任一发生时置 `needs_recheck: true` 并写 recheck_reason。不设统一 TTL，不加调度系统。
 
@@ -326,6 +326,7 @@ MVP 用 **Claude in Chrome**。已验证的选型依据：复用用户已登录�
 
 - r1 2026-09-23：初稿，六项待确认决定。
 - r2 2026-09-23：写入用户确认的六项决定；浏览器方案定为 Claude in Chrome；增加评审回路。
+- r4.2 2026-09-23：R29：pending 字段对岗位的影响按 applicability 逐岗位判断，方向级 pending_fields 只展示（§3.5、§4.1 第 5 步）。
 - r4.1 2026-09-23：第 3 轮复核指出的两处一致性修正：§3.3 字段状态枚举改为与 §3.2 一致（confirmed / pending / conflict / skipped / unknown，any 属于 kind）；§3.4 示例因含 pending hard 改标 draft，confirmed 版本移至 skill assets。M0/M1 实现见 [m0-m1-report.md](m0-m1-report.md)。
 - r4 2026-09-23：处理第 2 轮评审 R11–R17。事实导入后需回读确认，只有 confirmed 事实进表单，禁止项恢复"不创建账号"（R11）；kind 与 status 分开，过滤只用"适用的已确认 hard"，零 hard 不得 eligible，draft 有独立校验入口与 exploratory 标记（R12）；candidate 记 opening_status、freshness、facts_revision，prepare 入口先复核，复核触发扩展（R13）；workspace 自带 .gitignore，会话内持有 workspace_root，目录切换先提示，拒绝缓存路径，开发 checkout 规则写明，措辞改为"可能被复制进缓存"（R14）；fill_status 与 review_status 分开，blockers 与 review_items 分开，ready_for_review 重新定义（R15）；primary_direction、人工结果记录、去重措辞修正（R16）；Lever 时间字段置 null，boards 观察记录独立目录（R17）；§1 措辞同步；§6 与 M0 补对应反例。
 - r3 2026-09-23：处理第 1 轮评审 R01–R10。含义与强度分开确认（R01）；明确所有 hard 参与过滤、key_fields 为本质与搜索重点、draft 不限数量（R02）；字段独立确认与可观察依据（R03）；冲突先澄清、拆方向需用户确认、进度与字段状态分开（R04）；补齐 direction → candidate → application 数据约定与 facts 导入入口（R05）；ATS 原始字段与时间语义按 provider 映射、四种匹配状态齐全、search_hints 只影响发现（R06）；撤回 Playwright 反爬比较、修正 allowed-tools 说明、增加 Chrome 预检（R07）；按动作效果定义提交边界、blockers、承诺改为"停止在最终提交前"（R08）；workspace_root 解析与 plugin_root 分离（R09）；评测前移、里程碑重排（R10）。

@@ -314,11 +314,31 @@ def test_r21_duplicate_field_result_cannot_override_fail(tmp_path):
     assert has(problems, "field_results lists role.nature more than once")
 
 
-def test_r21_not_confirmed_field_forces_needs_clarification(tmp_path):
+def test_r29_relevant_pending_field_forces_needs_clarification(tmp_path):
     doc = cdoc(cand(applicability=[{"field_id": "role.nature", "state": "applicable"},
                                    {"field_id": "company.size", "state": "not_confirmed"}]),
                basis="exploratory", pending_fields=["company.size"])
     assert has(cval(tmp_path, doc), "imply needs_clarification")
+
+
+def test_r29_pending_field_out_of_scope_does_not_block(tmp_path):
+    """The direction still has a pending field, but for this opening it is explicitly out of scope."""
+    doc = cdoc(cand(applicability=[{"field_id": "role.nature", "state": "applicable"},
+                                   {"field_id": "location.workplace_type_after_move", "state": "not_applicable",
+                                    "reason": "valid_from 2027-06; opening judged for 2026-10 start"}]),
+               basis="exploratory", pending_fields=["location.workplace_type_after_move"])
+    assert cval(tmp_path, doc) == []
+
+
+def test_r29_pending_field_missing_from_applicability_is_an_error(tmp_path):
+    doc = cdoc(cand(), basis="exploratory", pending_fields=["location.workplace_type_after_move"])
+    assert has(cval(tmp_path, doc), "pending field location.workplace_type_after_move is missing from applicability")
+
+
+def test_r29_not_applicable_requires_reason(tmp_path):
+    doc = cdoc(cand(applicability=[{"field_id": "role.nature", "state": "applicable"},
+                                   {"field_id": "company.size", "state": "not_applicable"}]))
+    assert has(cval(tmp_path, doc), "company.size is not_applicable without a scope reason")
 
 
 def test_r21_pass_only_but_rejected_is_inconsistent(tmp_path):
@@ -327,7 +347,9 @@ def test_r21_pass_only_but_rejected_is_inconsistent(tmp_path):
 
 
 def test_r21_fail_outranks_pending_preferences(tmp_path):
-    doc = cdoc(cand(field_results=[{"field_id": "role.nature", "result": "fail", "evidence_refs": ["E-1"]}],
+    doc = cdoc(cand(applicability=[{"field_id": "role.nature", "state": "applicable"},
+                                   {"field_id": "industry", "state": "not_confirmed"}],
+                    field_results=[{"field_id": "role.nature", "result": "fail", "evidence_refs": ["E-1"]}],
                     match_status="rejected"), basis="exploratory", pending_fields=["industry"])
     assert cval(tmp_path, doc) == []
 

@@ -3,36 +3,79 @@ name: find-openings
 description: >-
   Take a direction template written by grill-direction and find current openings for it with
   evidence. Discover companies, confirm their official job board (Greenhouse, Ashby or Lever),
-  fetch published postings, judge each against the direction's applicable confirmed hard fields
-  as pass/fail/unknown, and write a candidate list the user decides on. Use this whenever the
-  user wants to search for jobs, companies or openings that fit a saved direction, or asks
-  "what's out there for me", "find companies", "check if this job fits".
-argument-hint: "[direction id or path, optional company names]"
+  fetch published postings with the bundled ats_fetch.py, judge each against the direction's
+  applicable confirmed hard fields as pass/fail/unknown, and write a candidate list the user
+  decides on. Use this whenever the user wants to search for jobs, companies or openings that fit
+  a saved direction, or asks "what's out there for me", "find companies", "check if this job
+  fits", "does this posting match my direction".
+argument-hint: "[direction id or path, optional company names or board URLs]"
 allowed-tools: Read Write Edit Glob Grep WebSearch WebFetch Bash(python3 *)
 ---
 
 # find-openings
 
-**Status: M0 skeleton.** The workflow below is the agreed contract from `docs/implementation-plan.md` §4. `scripts/ats_fetch.py` and the fixtures are not implemented yet; do not claim to have fetched anything until they are.
+You turn a direction into a list of openings the user can decide on, with the reasoning shown. The hard part is not finding postings; it is not lying about them. Every pass, fail or unknown must point at a field id, a direction revision and evidence with a check time. Read `references/evidence-rules.md` before judging anything.
 
-## What this skill produces
+**Status:** fetcher and fixtures implemented and smoke-tested online against two public boards (M2). Company discovery, judging and the candidate file are agent work following this contract; no end-to-end run has been recorded yet.
 
-`<workspace_root>/candidates/<direction-id>.md`: frontmatter per `schema/candidate.schema.json`, then a readable list grouped by match status. Every judgement cites a field id, the direction revision, and evidence ids with checked_at. The user's decision (`user_decision`) is theirs alone; you never set it.
+## Output
 
-## Workflow (contract)
+`<workspace_root>/candidates/<direction-id>.md`: frontmatter per `schema/candidate.schema.json`, then a readable list grouped by `match_status`. Run `scripts/validate.py candidate <file>` before showing it; the validator recomputes each status from the recorded results and rejects records where they disagree. `user_decision` is the user's alone; you never set it.
 
-1. **Resolve workspace** with `scripts/resolve_workspace.py --expect <root> --json` (see grill-direction §0 for exit codes). Read the direction. If it is a draft, proceed but set `basis: exploratory` and list `pending_fields`.
-2. **Applicability before evidence.** From the direction, select the fields that are `kind: hard`, `status: confirmed` and whose `scope` covers the opening being judged (an opening starting now is not subject to a field with `valid_from` next year). Record every hard field in `applicability` as applicable / not_applicable (with the scope reason) / not_confirmed. Only applicable ones get a `field_results` entry.
-3. **Company discovery.** Use `search_hints.keywords` and the key fields for WebSearch, or take company names from the user. `search_hints.deprioritize` only lowers ranking; record the terms in `search_bias`. A company being found is not a company being chosen.
-4. **Board confirmation.** From the company's own site, find the link to its job board and record that link as evidence. No official board found: record unknown, do not guess a board slug.
-5. **Fetch postings** with `scripts/ats_fetch.py` (to be implemented): list-request observations go to `evidence/boards/<provider>/<board>/<check-id>/`, per-posting snapshots to `evidence/openings/<opening-id>/`. Keep raw fields beside normalized ones. Time fields per provider: Ashby `publishedAt` → `source_published_at`; Greenhouse `updated_at` → `source_updated_at`; Lever has no documented time fields, both null. `team` is null unless the provider supplies it; never fill it from `department`. 404/timeout → `retrieval_status: failed`, `opening_status: unknown`, keep `last_successful_check_at`. Partial pagination → `partial`. A complete empty list is a successful zero result.
-6. **Judge.** For each applicable hard field: pass / fail / unknown, each with evidence ids. No JD text evidence → unknown. Never pass a field on your impression of a company or city. Compensation with mismatched basis (currency, period, base vs total) is not compared.
-7. **Status.** In this order: any applicable hard field failed → `rejected`; a direction field in conflict or pending, or zero applicable confirmed hard fields → `needs_clarification`; any applicable hard field unknown → `needs_verification`; all pass → `eligible_for_comparison`. Show `opening_status` and `freshness_status` next to it; a match is not an open door.
-8. **Write** the candidate file, run `scripts/validate.py candidate <file>`, then present the groups. Ask the user to mark `user_decision` themselves.
-9. **Recheck triggers.** Direction revision, facts revision, evidence change, stale check, closed or moved posting: set `needs_recheck: true` with a reason. Keep the old judgement as history.
+## Workflow
 
-## Not yet done
+### 0. Workspace and direction
 
-- `scripts/ats_fetch.py` for Greenhouse, Ashby, Lever.
-- `fixtures/` covering field differences, nulls, multiple locations, JD text, time fields, partial lists, zero results, board-level failure.
-- `references/evidence-rules.md` (a working copy of `reference/design/research-evidence.md` rules).
+```bash
+python3 "${CLAUDE_SKILL_DIR}/../../scripts/resolve_workspace.py" --expect <root> --json
+```
+
+Exit 3 means the resolution changed: tell the user. Read the direction file. If `status: draft`, proceed with `basis: exploratory` and copy its pending and conflict field ids into `pending_fields`.
+
+### 1. Applicability before evidence
+
+For each opening you will judge, list every hard field and every pending/conflict field of the direction in `applicability`:
+
+- `applicable`: confirmed hard, `scope` covers this opening (an opening starting now is not subject to a field with `valid_from` next year).
+- `not_applicable` with a `reason`: outside scope for this opening. Does not block.
+- `not_confirmed`: relevant here but the direction has not confirmed it. Blocks with `needs_clarification`.
+
+Do not leave a pending field out; the validator treats omission as an error, because omission is not proof of irrelevance.
+
+### 2. Company discovery
+
+Use `search_hints.keywords` and the key fields for WebSearch, or take company names and board URLs from the user. `search_hints.deprioritize` only lowers ranking; record the terms used in `search_bias` so the user knows low-ranked openings were not judged. A company being found is not a company being chosen.
+
+### 3. Board confirmation
+
+From the company's own site, find the careers link and follow it to the board. Record that link as evidence. The provider is visible in the board URL: `boards.greenhouse.io/<token>` or `job-boards.greenhouse.io/<token>`, `jobs.ashbyhq.com/<name>`, `jobs.lever.co/<site>`. No official board found: record `unknown`; never guess a slug.
+
+### 4. Fetch
+
+```bash
+python3 "${CLAUDE_SKILL_DIR}/scripts/ats_fetch.py" --provider greenhouse|ashby|lever --board <token> \
+    --workspace <root> --company <company_id>
+```
+
+It writes the board-level observation (request, raw pages, `retrieval_status`, coverage) to `evidence/boards/<provider>/<board>/<check-id>/` and one `posting.json` per opening to `evidence/openings/<opening-id>/`, raw beside normalized. Exit code 1 means the read was not complete (`partial` or `failed`); the observation says which pages failed. Read `observation.json` before using any posting from that check.
+
+Provider facts the script encodes and you must not undo: Greenhouse has `updated_at` only and no team; Ashby has `publishedAt` (latest publish, not first) and a real `team` field that may be null; Lever documents no time fields at all, and its `team` is a label. `team` is never filled from `department`.
+
+### 5. Judge
+
+For each applicable field: pass / fail / unknown, each with `evidence_refs` into this candidate's `evidence` list. The evidence entry names the snapshot path and the single claim it supports ("JD text says 'individual contributor', no direct reports"). No relevant text: unknown. Impressions of the company, city or title are not evidence. Compensation with mismatched currency, period or base/total basis is unknown with the mismatch noted. Soft fields get meets / tradeoff / unknown in `soft_results`.
+
+### 6. Status
+
+Recomputed, not chosen: any applicable field fails → `rejected`; any `not_confirmed` entry or zero applicable fields → `needs_clarification`; any unknown → `needs_verification`; otherwise `eligible_for_comparison`. Alongside it, `opening_status` from the latest successful check (`published_present` unless the JD says closed; `unknown` after a failed read) and `freshness_status`. A match is not an open door; show both.
+
+### 7. Write, validate, present
+
+Write the candidate file, run the validator, fix what it reports, then present the four groups with each opening's key evidence. Ask the user to mark `user_decision` themselves. Set `needs_recheck` with a reason when a direction or facts revision changes, evidence changes, a check is stale, or a posting closes or moves. Keep old judgements as history.
+
+## Files
+
+- `scripts/ats_fetch.py` — provider adapters, evidence writing, `--fixture` for offline runs.
+- `fixtures/` — synthetic responses for the three providers, an empty list, a 404 and a timeout; used by `tests/test_ats_fetch.py`.
+- `references/evidence-rules.md` — the rules above in full, with the status table.
+- `../../schema/candidate.schema.json`, `../../scripts/validate.py candidate`.

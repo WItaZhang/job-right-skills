@@ -1,0 +1,33 @@
+[
+  {
+    "id": "0f1e2d3c-0000-4000-8000-000000000001",
+    "text": "Staff Engineer, Storage Systems",
+    "categories": { "commitment": "Full-time", "department": "Engineering", "location": "Singapore", "team": "Storage", "allLocations": [ "Singapore", "Shenzhen" ] },
+    "country": "SG",
+    "workplaceType": "hybrid",
+    "description": "<div>Build the distributed storage layer.</div>",
+    "descriptionPlain": "Build the distributed storage layer.",
+    "descriptionBody": "<div>Build the distributed storage layer.</div>",
+    "descriptionBodyPlain": "Build the distributed storage layer.",
+    "lists": [ { "text": "Requirements", "content": "<li>Distributed systems</li>" } ],
+    "additional": "",
+    "additionalPlain": "",
+    "hostedUrl": "https://jobs.lever.co/synthco/0f1e2d3c-0000-4000-8000-000000000001",
+    "applyUrl": "https://jobs.lever.co/synthco/0f1e2d3c-0000-4000-8000-000000000001/apply",
+    "salaryRange": { "currency": "SGD", "interval": "per-year-salary", "min": 180000, "max": 240000 },
+    "createdAt": 1758500000000
+  },
+  {
+    "id": "0f1e2d3c-0000-4000-8000-000000000002",
+    "text": "Backend Engineer",
+    "categories": { "commitment": "Full-time", "department": "Engineering", "location": "Remote", "allLocations": [ "Remote" ] },
+    "country": null,
+    "workplaceType": "remote",
+    "description": "<div>Backend services.</div>",
+    "descriptionPlain": "Backend services.",
+    "lists": [],
+    "additional": "",
+    "hostedUrl": "https://jobs.lever.co/synthco/0f1e2d3c-0000-4000-8000-000000000002",
+    "applyUrl": "https://jobs.lever.co/synthco/0f1e2d3c-0000-4000-8000-000000000002/apply"
+  }
+]

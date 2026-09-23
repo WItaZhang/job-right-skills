@@ -112,3 +112,55 @@ $ python3 scripts/validate.py direction skills/grill-direction/assets/example-sy
 3. SKILL.md "Things that go wrong" 新增两条：不能把用户自述当作替代测试；不要把两个问题合在一条消息。
 
 **判断**：M1 的核心语义断言（不升级 hard、含义与强度分开、跳过/未知/暂停/恢复）在这一次真实运行中成立，可以进入 M2。仍未验证的：其他四个 eval 场景（同首句家庭动机、scope 与未证实张力、真冲突）只有定义没有运行；一次运行不能说明稳定性；修改后的 SKILL.md 没有再跑第二次。
+
+---
+
+# 第 3 版补充：M2 岗位采集（ats_fetch.py 与 fixtures）与 R29
+
+日期：2026-09-23。
+
+## 交付
+
+| 路径 | 内容 |
+|---|---|
+| `skills/find-openings/scripts/ats_fetch.py` | 三家 provider 适配器（标准库，无第三方依赖）；board 级观察记录写入 `evidence/boards/<provider>/<board>/<check-id>/`（request、原始页、observation），岗位写入 `evidence/openings/<opening-id>/posting.json`（normalized 与 raw 并列）；`--fixture` 离线运行；Lever 按 100 条翻页直到不满页；404/超时/不可解析 → failed，中途失败 → partial，完整零结果 → success |
+| `skills/find-openings/fixtures/` | 合成公司三家样本（含 team 为 null、多地点、prospect 岗位、isListed=false、Lever 未文档化 createdAt、salaryRange）、空列表、404、超时 |
+| `skills/find-openings/references/evidence-rules.md` | research-evidence.md 的落地版：一断言一证据、状态不混用、applicability 先于证据、判断字段的规则 |
+| `skills/find-openings/SKILL.md` | 从骨架改为完整工作流契约，含脚本用法与 R29 applicability 规则 |
+| `tests/test_ats_fetch.py` | 11 个离线用例 |
+| R29 | validate.py：applicability 必须列出方向的全部 hard 与 pending/conflict 字段；`not_applicable` 需 reason；只有 `not_confirmed` 触发 needs_clarification；方向级 pending_fields 只展示。schema 与方案 §3.5/§4.1 同步。配对回归 4 个 |
+
+## 已验证
+
+```
+python3 -m pytest tests -q                       → 94 passed
+```
+
+离线 fixtures 断言：Greenhouse department 不升级为 team、实体转义的 HTML 正文被还原为纯文本、prospect 岗位标记；Ashby team 有值与 null 各一、多地点、publishedAt → source_published_at、isListed=false 原样保留；Lever 两个时间字段为 null 且 raw 保留 createdAt、country null 保留；翻页满页后失败 → partial、不满页停止；404 与超时 → failed 且 board 级记录落盘不需 opening_id；重复检查各自独立目录，历史保留。
+
+**在线冒烟（三家各一个公开官方招聘板，只读 GET，未投递、未联系）**，观察记录存于 [docs/live-runs/ats-smoke-1/](live-runs/ats-smoke-1/)：
+
+| provider / board | retrieval_status | postings | pages | 字段完整性（非空计数） |
+|---|---|---|---|---|
+| greenhouse / stripe | success | 694 | 1/1 | department 694、jd_text 694（去标签后 0 条残留 `<`）、source_updated_at 694；team、workplace_type、apply_url、salary 全为 null（Greenhouse 无这些字段） |
+| ashby / openai | success | 825 | 1/1 | team 825、department 825、workplace_type 567、apply_url 825、jd_text 825、source_published_at 825、salary 825 |
+| lever / palantir | success | 318 | 4/4（真实翻页 100+100+100+18） | team 318、workplace_type 318、apply_url 318、jd_text 318、country 318；source_published_at / source_updated_at 全为 null，raw 中 318 条含未文档化 createdAt |
+
+冒烟中发现并修复两处：Greenhouse 的 content 是实体转义的 HTML，原去标签顺序错误导致正文残留标签（fixtures 已按真实格式改写并有断言）；同一秒内两次检查的 check-id 碰撞，改为微秒时间戳并在目录已存在时加后缀，绝不覆盖旧证据。
+
+## 已实现但未验证
+
+- find-openings 的完整工作流（公司发现 → 官网确认招聘板 → 采集 → 判断 → candidate 文件）没有端到端跑过；只有采集脚本在线验证过。
+- 三家接口的字段随时间变化的稳定性；本次只是一次读取。
+
+## 未实现
+
+- Chrome 预检与 M3（prepare-application 的 form-rules、本地表单、浏览器流程）。
+- M2/M3 首条端到端流程。
+- 跨文件校验入口（`validate.py workspace`）。
+
+## 待办（一般边界问题，不阻塞）
+
+- 大板一次拉取体积大（OpenAI 板 13 MB，Stripe 板 59 MB 工作区），evidence/openings 目录会很大；考虑只在用户选中公司后拉详情，或压缩原始页。
+- Greenhouse 的 `metadata` 可能含 Workplace 等自定义字段，目前只保留在 raw。
+- Lever 的 `workplaceType` 与 Ashby 的 `workplaceType` 取值集合不同，未归一。

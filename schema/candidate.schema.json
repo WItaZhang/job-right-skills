@@ -24,7 +24,7 @@
     "pending_fields": {
       "type": "array",
       "items": { "type": "string" },
-      "description": "Direction fields still awaiting confirmation at generation time."
+      "description": "Direction fields still awaiting confirmation at generation time. Display only: each must also appear in every candidate's applicability as not_applicable (with reason) or not_confirmed, and only not_confirmed affects match_status."
     },
     "candidates": { "type": "array", "items": { "$ref": "#/$defs/candidate" } }
   },
@@ -51,7 +51,8 @@
             "required": ["field_id", "state"],
             "properties": {
               "field_id": { "type": "string" },
-              "state": { "type": "string", "enum": ["applicable", "not_applicable", "not_confirmed"] },
+              "state": { "type": "string", "enum": ["applicable", "not_applicable", "not_confirmed"],
+                         "description": "applicable: confirmed hard field whose scope covers this opening. not_applicable: outside scope for this opening (reason required). not_confirmed: relevant to this opening but the direction has not confirmed it; blocks with needs_clarification." },
               "reason": { "type": "string" }
             }
           }

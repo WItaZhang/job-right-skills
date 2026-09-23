@@ -270,18 +270,28 @@ def expected_match_status(applicable: set[str], results: dict[str, str], has_unr
     if any(results.get(f) == "fail" for f in applicable):
         return "rejected", "an applicable confirmed hard field failed"
     if has_unresolved_preference or not applicable:
-        return "needs_clarification", "unresolved preference or zero applicable confirmed hard fields"
+        return "needs_clarification", "a relevant preference is not confirmed, or zero applicable confirmed hard fields"
     if any(results.get(f) == "unknown" for f in applicable):
         return "needs_verification", "an applicable hard field is unknown"
     return "eligible_for_comparison", "all applicable hard fields pass"
 
 
 def candidate_rules(fm: dict) -> list[str]:
+    """Per-opening relevance (review R29): `applicability` must list every hard field of the direction and
+    every field the direction still has pending or in conflict. A pending field marked not_applicable with a
+    scope reason does not block this opening; one marked not_confirmed does. Omitting a pending field is
+    not the same as proving it irrelevant, so it is an error. The direction-level pending_fields list is
+    kept for display only and never decides a status by itself."""
     problems: list[str] = []
     pending_fields = set(fm.get("pending_fields") or [])
     for c in fm["candidates"]:
         oid = c["opening_id"]
         app_ids = [a["field_id"] for a in c["applicability"]]
+        for a in c["applicability"]:
+            if a["state"] == "not_applicable" and not a.get("reason"):
+                problems.append(f"{oid}: {a['field_id']} is not_applicable without a scope reason")
+        for fid in sorted(pending_fields - set(app_ids)):
+            problems.append(f"{oid}: pending field {fid} is missing from applicability; mark it not_applicable (with reason) or not_confirmed")
         res_ids = [r["field_id"] for r in c["field_results"]]
         for d in _duplicates(app_ids):
             problems.append(f"{oid}: applicability lists {d} more than once")
@@ -309,7 +319,7 @@ def candidate_rules(fm: dict) -> list[str]:
             if r["result"] in ("pass", "fail") and not r.get("evidence_refs"):
                 problems.append(f"{oid}: {r['field_id']} is {r['result']} without any evidence reference")
 
-        unresolved = bool(not_confirmed or pending_fields)
+        unresolved = bool(not_confirmed)
         expected, why = expected_match_status(applicable, results, unresolved)
         if c["match_status"] != expected:
             problems.append(f"{oid}: match_status is {c['match_status']} but the recorded results imply {expected} ({why})")
