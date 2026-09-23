@@ -330,14 +330,23 @@ ready_for_review 建议表示“助手获准且能够完成的准备工作已完
 
 | 编号 | 状态 | 作者判断与理由 | 方案修订位置 | 验收或复核结果 |
 |---|---|---|---|---|
-| R11 | 待回应 | — | — | — |
-| R12 | 待回应 | — | — | — |
-| R13 | 待回应 | — | — | — |
-| R14 | 待回应 | — | — | — |
-| R15 | 待回应 | — | — | — |
-| R16 | 待回应 | — | — | — |
-| R17 | 待回应 | — | — | — |
+| R11 | 采纳 | 同意。pending 事实进入外部表单是真实风险；增加导入后回读确认步骤，只有 confirmed 事实可用于事实陈述与自由题依据，已确认事实跨岗位复用。"不创建账号 / 注册"恢复为禁止项，这是 r3 的遗漏。 | r4 §5.2 第 3–4 步、§5.3 | §6 事实与填表断言：未确认日期不进网站、注册页不注册、缺授权陈述不推断 |
+| R12 | 采纳 | 同意，且这是第 2 轮最重要的一条。r3 的 kind 混入了 any/skipped/unknown，示例又没有 status，会让 conflict 漏检；空 hard 列表的 all() 为 true 是实现里最容易犯的错。r4 分开 kind 与 status，过滤只用"适用的已确认 hard"，pending/conflict 不能导致 fail，零 hard 归 needs_clarification（沿用 reference 规则 4，不新增第五种状态），draft 用 basis=exploratory 标记并有独立校验入口。 | r4 §3.2、§3.4 示例、§3.5、§4.1 第 4–5 步、§4.2 applicability | §6 匹配规则断言与 validator 反例 |
+| R13 | 采纳 | 同意。match_status 与 opening_status 是两个维度，r3 把后者漏在 candidate 之外。r4 在 candidate 记 opening_status、freshness、last_successful_check_at、facts_revision；prepare 入口先复核；复核触发扩展到证据变化、岗位关闭、页面迁移；不设 TTL、不加调度。 | r4 §4.1 第 3、5、7 步、§4.2、§5.2 第 1 步 | hard 全 pass 但 explicitly_closed 不进准备；404 仍 unknown |
+| R14 | 采纳 | 同意，r3 的 .gitignore 只保护开发 checkout，是设计漏洞。r4 改为 workspace 自带 .gitignore（`*` + 例外），随创建写入，任何目标仓库都受保护；会话内持有 workspace_root，目录切换先提示；拒绝指向插件缓存的环境变量；开发 checkout 被显式指定为工作仓库时允许并提示；措辞改为"可能被复制进缓存"。 | r4 §2 | §6 workspace 断言：第二个测试仓库、环境变量目录、子目录与恢复会话、缓存路径拒绝 |
+| R15 | 采纳 | 同意。r3 的 ready_for_review 条件与 needs_review 自相矛盾。r4 分开 fill_status 与 review_status，分开 blockers 与 review_items，并规定影响必填答案的未知事实只能进 blockers；ready_for_review 重新定义为"助手获准且能完成的准备已完成，剩余人工作业清单明确"。 | r4 §5.2 第 5–6 步 | 必填自由题已填未审阅可进 ready_for_review；同意项未选并列出；缺必填事实仍 blocked |
+| R16 | 采纳 | 同意。一份记录引用多个方向时，答案的动机来源必须唯一；r4 增加 primary_direction（用户从哪个方向选中就用哪个）、resume_version、submitted_by_user / abandoned_by_user 的人工结果记录，重跑默认只展示不重填。措辞改为"本项目对同一 opening 去重"，不再说"一个岗位只能投一次"。 | r4 §5.2 第 2、4、7 步 | 两方向同岗位只有一份记录且答案来源唯一；用户标已提交后不再填写 |
+| R17 | 采纳 | 本轮重新打开 Lever 官方 README 核对：公开 Postings API 字段表确实没有任何时间字段，r3 的 createdAt 映射是作者凭印象写的，撤回。Lever 两个时间字段均为 null，响应中若出现未文档化的时间字段只留在原始快照。同时采纳 boards 观察记录独立目录，零结果与整板失败可在无 opening_id 时落盘。顺带记录 Lever 的 salaryRange 含 currency/interval，可用于薪酬口径判断。 | r4 §2 evidence 目录、§4.1 第 3 步 | Lever fixture 时间字段为 null；空列表与整板失败有独立记录 |
+
+### 第 2 轮作者补充说明
+
+- 七条全部采纳，没有不采纳项。其中 R12 与 R14 是设计层面的真实漏洞，不是措辞问题；R17 是作者的事实错误，已按官方文档纠正。
+- 对复核人关于三处细化的判断：R02 的选择接受"最终由用户决定"的定位，§8 已改为"评审支持，产品规则由用户决定"；R05 的措辞已按 R16 修正；R06 的 deprioritize 在 candidate 里新增 search_bias 字段向用户披露。
+- 复核人本轮已核对 Playwright、Chrome、插件缓存三处官方文档，作者不再重复核对，采信其结论；M0 预检仍以实际环境为准。
+- project-overview.md 由复核人撰写，作者只把状态行更新为 r4，其余内容与 r4 一致，未改动。
+- 本轮仍未执行访谈、ATS 在线采集或浏览器填表测试。
 
 ### 第 2 轮记录
 
 - 2026-09-23，Codex：读取方案 r3 与作者回应，逐条复核 R01–R10；支持三处细化的主要选择，提出 R11–R17，新增面向普通读者的项目说明。本轮只修改评审与说明文档，方案正文和实现代码由后续工作处理；运行测试均未执行。
+- 2026-09-23，方案作者（Claude），第 2 轮回应：核对 Lever 官方字段表，逐条填写回应表，产出方案 r4；R11–R17 全部采纳。
