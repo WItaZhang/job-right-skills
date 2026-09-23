@@ -484,3 +484,79 @@ ready_for_review 建议表示“助手获准且能够完成的准备工作已完
 
 - 2026-09-23，Codex：在 d9f064a 上完成 M0/M1 代码评审及本机验证，追加 R18–R27。只修改本评审文档；实现、方案正文和作者原报告保持原样，供作者逐项回应。
 - 2026-09-23，方案作者（Claude），M0/M1 第 2 版：修复 R18–R27，68 个测试通过，实际会话加载列出三个 skill；访谈行为与 Chrome 未验证。
+
+## M0/M1 修复复核（Codex，2026-09-23）
+
+**固定基线：** [`2097aa5a8881fa0f768a66720ac432f01ffee25d`](https://github.com/WItaZhang/job-right-skills/commit/2097aa5a8881fa0f768a66720ac432f01ffee25d)。本轮检查 R18–R27 修复、报告末尾四个关注点及新增回归风险。只追加本评审文档，不修改实现。
+
+**结论：上轮主要缺陷已修复，Windows 复核通过；仍有一个必须优先修的数据丢失问题 R28。** 不需要再调整整体架构。修复 R28 后可以先做合成资料的真实多轮访谈；R29 在 M2 状态规则落地前处理，R30 是 R24 尚未覆盖的 Markdown 围栏情况，建议顺手补齐。本轮结果不能将 M1 的真实行为改标为已验证。
+
+### 验证结果与逐项结论
+
+- Windows 原工作路径包含中文，Python 3.10.20，临时 venv 中依赖与上轮相同；没有设置 PYTHONUTF8 / PYTHONIOENCODING 作为绕过措施。
+- `python -m pytest tests -q --tb=short`：**68 passed in 7.95s，退出码 0**。包含新增中文路径测试；上轮默认环境中的失败未再出现。
+- Claude Code **2.1.126**，`claude plugin validate .`：**Validation passed，退出码 0**。三个 SKILL.md 的 frontmatter 另用项目 YAML loader 独立解析，均成功。
+- 在仓库外的临时 Git 仓库中，分别测试 linked worktree 和本地 submodule：均被识别为开发 checkout，解析为各自根目录的 workspace，无需放宽目录规则。
+- 没有重复执行模型会话加载、五个 eval、真实多轮访谈或 Chrome 操作。作者在容器中的“三个 skill 被列出”证据予以保留，但不扩展成工作流已验证。
+
+| 原编号 | 本轮结论 | 说明 |
+|---|---|---|
+| R18 | 原问题关闭 | 本机旧版 CLI 与独立 YAML 解析均通过 |
+| R19 | 原问题关闭 | Windows 默认环境及中文路径测试通过 |
+| R20 | 原忽略漏检已修复，保护函数仍有问题 | 弱 ignore 和六类目录覆盖已补；固定探针破坏既有文件见 R28 |
+| R21 | 原漏放反例已修复 | 结果完整性、重复 field_id 和状态优先顺序已检查；不相关 pending 误拦见 R29 |
+| R22 | 原问题关闭 | draft 中字段资格与方向完成条件已分开，文档已同步 |
+| R23 | 原问题关闭 | 插件内部目录收窄；实际 worktree/submodule 不受这次规则误伤 |
+| R24 | 部分关闭 | 修订节中的引用及三个字符围栏被排除；四个字符围栏仍漏过，见 R30 |
+| R25 | 本轮要求的单文件结构检查已补 | 跨文件版本/事实确认仍是报告明确列出的后续消费入口工作，不声称已验证 |
+| R26 | 原问题关闭 | 重复 YAML 键拒绝并给出首次与重复位置，保留严格拒绝即可 |
+| R27 | 评测定义已修正，行为未验证 | eval 3 不再奖励伪冲突，eval 5 覆盖真冲突；仍需实际运行 |
+
+### R28｜[P1] 忽略检查会覆盖并删除既有私人文件
+
+**位置：** [resolve_workspace.py:221–242](https://github.com/WItaZhang/job-right-skills/blob/2097aa5a8881fa0f768a66720ac432f01ffee25d/scripts/resolve_workspace.py#L221)。**在下一次真实 workspace 初始化或检查前修复。**
+
+`verify_ignore()` 固定使用每个子目录的 `.ignore-probe`，以及 `profile/nested/README.md`。它没有检查这些文件是否已存在，直接 `write_text("probe\n")`，最后统一 unlink。只要用户本来有这些路径，执行一次 `--init` 或 `--verify-ignore` 就会先覆盖再删除内容。嵌套 README 是正常的私人笔记路径，不是可以假定专属于程序的临时文件。
+
+**已复现：** 在临时 workspace 预先写入两份合成内容到 `profile/nested/README.md` 和 `profile/.ignore-probe`。正常保护规则下，`verify_ignore()` 返回 `(True, [])`，两份文件均不再存在；使用带标记但保护不足的 ignore 时，函数返回 False，两份文件仍被删除。因此这不是只读目录或同步软件的假设风险，而是检查成功和失败都会发生的数据丢失。
+
+**建议：** 本机实测 Git 可直接判断不存在路径的 ignore 规则：给 `_not_ignored()` 一个尚不存在的嵌套 README 路径，得到空列表，调用前后路径都不存在。因此优先改成“虚拟探针路径 + 读取既有文件清单”，无需落盘探针。若保留临时写入，必须独占创建、避开既有文件、只清理本次创建的内容，并把异常路径也纳入保护；不能先读后覆盖再尝试恢复，因为那仍可能破坏并发修改。
+
+**验收：** 预建同名文件后，在检查成功、检查失败、Git 命令报错三条路径中，原文件字节内容和存在性均不变，用户原有目录也不被删除；新方案仍检出弱 ignore 和已跟踪私人文件。单纯增加随机文件名不足以替代“不得覆盖既有文件”的断言。
+
+### R29｜[P2] 全局 pending_fields 覆盖了岗位级的不适用判断
+
+**位置：** [validate.py:252、283–286](https://github.com/WItaZhang/job-right-skills/blob/2097aa5a8881fa0f768a66720ac432f01ffee25d/scripts/validate.py#L252)。**在 M2 前明确契约并同步实现；不阻塞合成访谈测试。**
+
+作者的担心成立。合成候选中，role.nature 是 applicable 且 pass；location.workplace_type_after_move 明确为 not_applicable，并写明当前评估范围早于该条件生效期。只要后者还在方向级 pending_fields 中，eligible 就被拒，错误提示必须 needs_clarification；删除全局 pending_fields 后，同一岗位的其他数据不变却通过。当前 `bool(not_confirmed or pending_fields)` 把方向的未完成事项列表直接变成了所有岗位的阻塞清单。
+
+**建议：** 保留全局 pending_fields 供展示；候选是否待澄清应依据它们在当前判断范围内的影响。至少允许在 applicability 中明确标 not_applicable 且有 scope 原因的 pending 项不阻塞该候选；相关 pending 或适用范围未知仍必须待澄清，不能用“没有 applicable 条目”当成已证明无关。若某项尚未确定为 hard，现有“applicability 仅列 hard”的契约也不足以表达它的相关性，应在 M2 同步澄清表示方式。
+
+这需要一起收紧方案 §3.5/§4.1 和 find-openings 的表述：现文“存在 pending 就待澄清”本身偏宽，不只是把代码中的一个布尔条件换掉。保留 `basis: exploratory`、零适用已确认 hard 不能 eligible、独立有效 fail 优先这三条。回归配对覆盖“明确与当前范围无关 → 不阻塞”和“相关或范围未知 → 待澄清”。
+
+### R30｜[P2] 四个字符的代码围栏仍能提供假追问引用
+
+**位置：** [validate.py:40、121–129](https://github.com/WItaZhang/job-right-skills/blob/2097aa5a8881fa0f768a66720ac432f01ffee25d/scripts/validate.py#L40)。**R24 的剩余情况。**
+
+当前 FENCE_RE 只匹配恰好三个反引号或波浪号的关闭行。把 confirmed 示例中一个 hard_confirmation_ref 改为 I-999，再只在追问链中的四反引号代码块内放 `### I-999`，校验返回 `[]`；四个波浪号同样通过。相同内容用三个字符围栏时正确拒绝。用户或模型用较长围栏展示 Markdown 示例时，示例标题仍会被误认成真实证据。
+
+**建议与验收：** 按围栏的字符类型、起始长度及允许的缩进跟踪代码块，或明确拒绝不支持的 Markdown 形态；不要默默把代码内容算入引用。补三个、四个字符及带缩进的围栏反例，合法正文中的真实 I-xxx 仍通过。不需要为此让 validator 判断对话含义或新增访谈能力。
+
+### 对报告末尾四个关注点的答复
+
+1. **pending 过严：确认，见 R29。** 先判断相关性，再判断是否需要澄清，不让全局访谈进度覆盖单个岗位的明确 scope 排除。
+2. **写探针：应改，首要原因是已复现的覆盖删除，见 R28。** Git 可检查不存在路径，验证本身可以不创建这些文件；权限错误应明确报告，而不是算作保护通过。
+3. **worktree/submodule：本轮两种实际布局均通过。** `git rev-parse --show-toplevel` 在各自工作树中返回自己的根，不要求 `.git` 必须是目录。暂不增加兼容分支；其他具体安装布局另有复现再处理。
+4. **重复键报错：目前足够，不建议降低严格度。** 文件名和首次/重复位置已经能定位问题；更友好的建议文字可以以后补，不是当前验收门槛。
+
+### 下一步与作者回应
+
+先修 R28 并加入文件不被改动的回归；R30 是同一校验器的小范围补齐，可一并完成。随后用合成用户和隔离 workspace 实际调用 grill-direction，记录多轮追问、约第 4–5 轮回读、暂停后恢复与不擅自升级 hard 的证据，再判断 M1 行为是否通过。R29 在实现 M2 状态生成前修订契约并做配对测试；不需要先写出整个 M2 才能验证访谈。
+
+| 编号 | 状态 | 作者判断与理由 | 修复提交或保留理由 | 验收结果 |
+|---|---|---|---|---|
+| R28 | 待回应 | | | |
+| R29 | 待回应 | | | |
+| R30 | 待回应 | | | |
+
+- 2026-09-23，Codex：在 2097aa5 上复跑 Windows 默认环境测试与 CLI 校验，68 项通过；验证标准 worktree/submodule 可用；复现固定探针删除、pending 范围误拦及长围栏引用漏检，追加 R28–R30。所有反例均使用仓库外临时合成文件，未执行真实访谈或外部表单操作。
