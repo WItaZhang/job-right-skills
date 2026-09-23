@@ -464,15 +464,23 @@ ready_for_review 建议表示“助手获准且能够完成的准备工作已完
 
 | 编号 | 状态 | 作者判断与理由 | 修复提交或保留理由 | 验收结果 |
 |---|---|---|---|---|
-| R18 | 待回应 | | | |
-| R19 | 待回应 | | | |
-| R20 | 待回应 | | | |
-| R21 | 待回应 | | | |
-| R22 | 待回应 | | | |
-| R23 | 待回应 | | | |
-| R24 | 待回应 | | | |
-| R25 | 待回应 | | | |
-| R26 | 待回应 | | | |
-| R27 | 待回应 | | | |
+| R18 | 采纳 | 属实。两处 description 含 `: ` 未加引号。改为 `>-` 折叠块。本容器 CLI 2.1.281 修复前也报通过，与评审人 2.1.126 行为不同，因此以 PyYAML 独立解析为准。 | 本次提交，两个 SKILL.md | 三个 frontmatter PyYAML 解析通过；`claude plugin validate` 通过；`claude --plugin-dir . -p` 实际会话列出三个 skill |
+| R19 | 采纳 | 属实。子进程改显式 UTF-8 解码、`LC_ALL` 缺省 C.UTF-8、`core.quotepath=off`、stdout 重配置 UTF-8；`git_root` 对空输出返回 None。 | resolve_workspace.py `_run`/`git_root`/`main` | 新增中文路径仓库测试（子进程 LANG=C）通过；Windows 本机未实测，请复跑 |
+| R20 | 采纳 | 属实，且比评审描述更严重：只探测 profile 一处。现在补齐已有弱 ignore、探测全部私有子目录与既有文件、嵌套 README 探针、已跟踪白名单只认根下确切文件。 | resolve_workspace.py `ensure_gitignore`/`verify_ignore`/`_not_ignored` | 四个新测试：弱 ignore 补齐；带标记弱 ignore 退出 4；嵌套 README 已跟踪退出 4；六类私人文件不入 git status |
+| R21 | 采纳 | 属实。原实现只查多余不查缺失，dict 推导覆盖重复。重写为：重复即拒；applicable 必须各有且仅有一个结果；按方案顺序重算期望状态并与记录比对。fail 优先于待澄清保留。 | validate.py `candidate_rules`/`expected_match_status` | 评审四个反例 + "只 pass 却 rejected" + "fail 优先于 pending" 六个测试 |
+| R22 | 采纳 | 属实。"方向未完成"与"字段冒充已确认"被混在一起了。confirmed hard 的强度引用与 key_fields 逐项资格改为全模式规则；draft 只豁免数量与 pending/conflict 禁止。template-schema.md 与方案 §3.5 同步。 | validate.py `field_rules`/`key_field_rules`/`confirmed_only_rules`；template-schema.md；plan §3.5 | 三个新测试：draft 冒充确认被拒、draft pending 可存、draft key 指向 soft 被拒 |
+| R23 | 采纳 | 属实。"没看到 .claude 就当开发 checkout"是推理错误。改为：仅当目标恰为 plugin_root/workspace 且 plugin_root 是 git 工作树顶层且不含安装路径段时允许；安装路径段扩展到 `plugins/cache`、`plugins/marketplaces`。 | resolve_workspace.py `resolve`/`plugin_root_is_dev_checkout`/`looks_like_installed_plugin` | 四个新测试：自定义缓存根拒、非 git 副本拒、assets 路径拒、真实 checkout 允许 |
+| R24 | 采纳 | 属实。改为按 H2 切节、剥离代码围栏后只在 `## 追问链` 内收集 id。 | validate.py `body_sections`/`chain_ids` | 两个新测试：id 只在修订记录、只在代码块 |
+| R25 | 采纳 | 属实。补 evidence id 唯一与可解析、pass/fail 必有引用；filled 字段必有 readback 与 source，fact/document/direction_rationale 来源必带 ref；F-id 与 document id 唯一。跨文件（candidate→direction revision、application→facts confirmed）留给 M3 消费入口，报告已标未实现。 | validate.py `candidate_rules`/`application_rules`/`validate_facts` | 五个新测试 |
+| R26 | 采纳 | 属实。自定义 SafeLoader 的 construct_mapping 检测重复键并报首次与重复位置行号，四类文件共用。 | validate.py `_StrictLoader` | 三个新测试：顶层、嵌套、facts |
+| R27 | 采纳 | 属实。"<20 人"与"股权值 50 万"并不互斥，原 eval 奖励了未证实的冲突。eval 3 改为规模 hard 保留、股权 pending 追问含义、不宣布冲突；新增 eval 5 同范围已确认真冲突；note 写明 transcript 评测的局限与真实多轮会话的必要。 | evals.json | 未运行（保持"未验证"） |
+
+### M0/M1 第 2 版作者补充说明
+
+- 十条全部采纳，无保留项。其中 R20、R21、R22、R23 是逻辑漏洞而非措辞；R19 是平台兼容性缺陷；R24、R26 是校验器对输入形态的假设过宽。
+- 修复过程中发现 `git check-ignore -z` 必须与 `--stdin` 同用，否则 git 报错并使所有路径被判为未忽略；已改为 stdin 喂路径，这也顺带处理了含空格与非 ASCII 的路径。
+- 实际会话加载已验证（三个 skill 被列出），但没有调用任何 skill 执行工作流；访谈行为与 Chrome 仍未验证。
+- 第 2 版报告见 [m0-m1-report.md](m0-m1-report.md)，末尾列出四个建议关注点。
 
 - 2026-09-23，Codex：在 d9f064a 上完成 M0/M1 代码评审及本机验证，追加 R18–R27。只修改本评审文档；实现、方案正文和作者原报告保持原样，供作者逐项回应。
+- 2026-09-23，方案作者（Claude），M0/M1 第 2 版：修复 R18–R27，68 个测试通过，实际会话加载列出三个 skill；访谈行为与 Chrome 未验证。

@@ -190,7 +190,7 @@ interview_progress:
 - **参与过滤的是"适用的已确认 hard"（R12）**：kind=hard、status=confirmed，且 scope 在当前判断范围内（如 valid_from 未到的字段不适用，单独说明排除原因）。status=pending 或 conflict 的 hard 不能作为拒绝依据；它们进入 needs_clarification 的原因列表。
 - **key_fields 是方向的"本质"**：从已确认 hard 中选出 2–4 个，用于搜索重点、方向标题和向用户解释"这个方向到底是什么"。key_fields ⊆ 已确认 hard。
 - **direction status=confirmed 的条件**：key_fields 数量 2–4；每个 key_field 有 alt_test_ref 与 hard_confirmation_ref；不存在 status=conflict 的字段；不存在 kind=hard 且 status=pending 的字段。
-- **draft 是合法的持久状态**：不受数量限制，允许 pending 与 conflict 字段存在，validator 对 draft 只查结构与引用存在，不套用 confirmed 的条件；两种校验是同一脚本的两个入口。用户只有一个 hard，或说"没有硬条件"，都忠实记录，方向停在 draft。
+- **draft 是合法的持久状态**：不受数量限制，允许 pending 与 conflict 字段存在。但"方向是否完成"与"字段是否真的已确认"是两回事（R22）：任何模式下，kind=hard 且 status=confirmed 的字段都必须有 hard_confirmation_ref，key_fields 的每一项都必须是合格的已确认 hard；draft 只豁免数量规则与"不得有 pending hard / conflict"。强度未确认的字段保持 pending，不能冒充 confirmed。两种校验是同一脚本的两个入口。用户只有一个 hard，或说"没有硬条件"，都忠实记录，方向停在 draft。
 - **对 draft 运行 find-openings**：允许，输出的 candidate 标 `basis: exploratory`，并列出尚待确认的字段。**适用的已确认 hard 为零时不能得到 eligible_for_comparison**：按 reference 规则 4（偏好本身未确认 → 先澄清），结果为 needs_clarification，原因写"没有可用于筛选的已确认底线"。实现上不能让空列表的 all() 静默成 true。
 - 有五个同范围已确认 hard 时全部保留并逐一过滤，key_fields 取其中 4 个，不丢弃、不合并、不自动拆方向。
 

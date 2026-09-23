@@ -1,6 +1,6 @@
 {
   "skill_name": "grill-direction",
-  "note": "Not yet run as of 2026-09-23. These evals feed a simulated interview transcript to the skill and ask it to (a) write the direction file(s) and (b) state the next questions. They check the semantic rules the validator cannot: meaning vs strength, following the user's reason, scope before conflict, no invented hard lines. Workspace root for runs is given inline so no real profile is touched.",
+  "note": "Not yet run as of 2026-09-23. These evals feed a simulated interview transcript to the skill and ask it to (a) write the direction file(s) and (b) state the next questions. They check the semantic rules the validator cannot: meaning vs strength, following the user's reason, scope before conflict, no invented hard lines, no premature conflict. Workspace root for runs is given inline so no real profile is touched. Transcript-based evals cannot exercise the live frontier, periodic readback or pause/resume; at least one real multi-turn session with a scripted user persona is required before M1 is called verified (review R27).",
   "evals": [
     {
       "id": 1,
@@ -35,16 +35,18 @@
     },
     {
       "id": 3,
-      "name": "scope-not-conflict-then-real-conflict",
+      "name": "scope-not-conflict-and-unproven-tension",
       "prompt": "Use JOB_RIGHT_WORKSPACE=/tmp/jr-eval-3. Below is a transcript (synthetic). Continue the grill-direction workflow: update or write the direction file and state how you handle the two apparent tensions.\n\nUser: 我现在必须全远程，我在照顾小孩，这个没法商量。\nAssistant: 如果其他条件都好但要每周到岗，你会拒绝吗？\nUser: 会。\nAssistant: 这个情况会持续多久？\nUser: 到明年 9 月小孩上学以后就可以混合办公了。\nUser: 另外我想进一家 20 人以下的早期公司，这个也是必须的，我只想在小团队里做。\nAssistant: 如果一家 200 人的公司里有一个 6 人的独立小组，可以吗？\nUser: 不行，我要的是公司整体就小。\nAssistant: 其他都好但公司 200 人，你会拒绝吗？\nUser: 会。\nUser: 对了，我还必须要有股权价值至少能到 50 万美元的那种规模的公司，这个也是必须的，小公司股权不值钱的我不去。",
-      "expected_output": "Remote-now and hybrid-later are two scoped fields, not a conflict. Company size <20 (hard, confirmed) and 'equity worth at least 500k, small-company equity is worthless' are treated as a possible same-scope hard conflict: both marked conflict with conflicts_with, and the next question is the single question that would resolve it. The file stays draft and is not split.",
+      "expected_output": "Remote-now and hybrid-later are two scoped fields, not a conflict. company.size (<20) stays a confirmed hard field. The equity statement is recorded as a pending field whose meaning is unclear (valuation basis, vesting, what 'worth 500k' means) and the user's claim that small-company equity is worthless is treated as something to probe, not as proof that the two conditions exclude each other. Nothing is marked conflict yet; the file stays draft and is not split.",
       "files": [],
       "expectations": [
         "The written direction file passes scripts/validate.py direction",
         "Remote requirement has a scope (valid_until or note about September next year) and the later hybrid preference is a separate field with valid_from; neither is marked conflict",
-        "company.size (<20) and the equity requirement are both status conflict with conflicts_with referencing each other, OR the equity field is status pending with an open question that names the tension; in no case is one silently dropped or overridden",
+        "company.size (<20) is kind hard, status confirmed, with alt_test_ref and hard_confirmation_ref",
+        "The equity requirement exists as a field with status pending (its meaning and strength unconfirmed); it is NOT marked conflict and company.size is NOT marked conflict",
+        "Neither company.size nor the equity field is dropped, softened or overridden",
         "The direction is not split into two files",
-        "The next question asks the user to resolve the size/equity tension rather than choosing for them"
+        "The next question probes what the equity requirement means (basis of the 500k figure, vesting, whether a small company could satisfy it) rather than announcing that the two conditions are incompatible or choosing for the user"
       ]
     },
     {
@@ -59,6 +61,21 @@
         "location.city_profile is not re-asked",
         "The file is not modified before the user answers (revision stays 2)",
         "The assistant tells the user the direction is currently a draft with one confirmed hard field"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "true-same-scope-hard-conflict",
+      "prompt": "Use JOB_RIGHT_WORKSPACE=/tmp/jr-eval-5. Below is a transcript (synthetic). Continue the grill-direction workflow: write the direction file and state your next message.\n\nUser: 我必须每周至少三天到办公室，我在家完全没法工作，这是底线。\nAssistant: 如果一个岗位其他都很好但只提供全远程，你会拒绝吗？\nUser: 会，我试过全远程，半年就崩了。\nAssistant: 这个要求从什么时候开始、到什么时候？\nUser: 现在开始，一直都是。\nUser: 还有，我从下个月起就搬到山里的老家了，那边一百公里内没有任何公司，我也不打算再搬，所以我只能接受完全不需要到岗的工作，这也是底线。\nAssistant: 如果一个岗位其他都很好但要求每周到岗一天，你会拒绝吗？\nUser: 会，我根本到不了。",
+      "expected_output": "Both requirements are confirmed hard in the same time scope and cannot both hold. Both fields are marked status conflict with conflicts_with pointing at each other. The file stays draft. The assistant does not pick one, does not assume the later statement overrides the earlier one, does not split into two directions, and asks the single smallest question that would change the judgement (for example whether one of the two is actually about something else, or which one the user would revise).",
+      "files": [],
+      "expectations": [
+        "The written direction file passes scripts/validate.py direction and has status draft",
+        "Both the onsite-3-days requirement and the fully-remote requirement exist as separate fields, each kind hard with hard_confirmation_ref",
+        "Both fields are status conflict and each lists the other in conflicts_with",
+        "Neither field is removed, downgraded to soft, or overwritten by the other",
+        "The direction is not split into two files",
+        "The next message names the conflict plainly and asks one question that lets the user resolve it; it does not recommend which side to drop"
       ]
     }
   ]

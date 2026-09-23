@@ -1,6 +1,12 @@
 ---
 name: find-openings
-description: Take a direction template written by grill-direction and find current openings for it with evidence: discover companies, confirm their official job board (Greenhouse, Ashby or Lever), fetch published postings, judge each against the direction's applicable confirmed hard fields as pass/fail/unknown, and write a candidate list the user decides on. Use this whenever the user wants to search for jobs, companies or openings that fit a saved direction, or asks "what's out there for me", "find companies", "check if this job fits".
+description: >-
+  Take a direction template written by grill-direction and find current openings for it with
+  evidence. Discover companies, confirm their official job board (Greenhouse, Ashby or Lever),
+  fetch published postings, judge each against the direction's applicable confirmed hard fields
+  as pass/fail/unknown, and write a candidate list the user decides on. Use this whenever the
+  user wants to search for jobs, companies or openings that fit a saved direction, or asks
+  "what's out there for me", "find companies", "check if this job fits".
 argument-hint: "[direction id or path, optional company names]"
 allowed-tools: Read Write Edit Glob Grep WebSearch WebFetch Bash(python3 *)
 ---

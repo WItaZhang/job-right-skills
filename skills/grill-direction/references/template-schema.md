@@ -80,7 +80,7 @@ A skipped or unknown field cannot be `kind: hard`: nobody confirmed anything.
 4. No `kind: hard` field has `status: pending`.
 5. Every `kind: hard, status: confirmed` field has a `hard_confirmation_ref`.
 
-A draft is exempt from 1, 2, 4 and 5 but must still be structurally valid and every reference must exist in `## 追问链`.
+A draft is exempt from rule 1 (the count) and rule 4 (pending hard fields are allowed). Rules 2, 3-as-structure, and 5 hold in every mode: a field that claims `kind: hard, status: confirmed` must carry its `hard_confirmation_ref`, and every key field must individually qualify, because find-openings filters on confirmed hard fields even when the direction is still a draft. A field whose strength was never confirmed stays `status: pending`. Every reference must exist as a `### I-xxx` heading inside `## 追问链`; ids appearing only in the revision log or in code blocks do not count.
 
 ## Interview entry (`### I-xxx`)
 

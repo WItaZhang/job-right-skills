@@ -1,6 +1,13 @@
 ---
 name: prepare-application
-description: Prepare a job application for an opening the user marked as interested: open the application form in the user's own Chrome, fill fields from confirmed background facts, upload the designated resume, draft free-text answers for review, and stop before final submission with a written record of what was filled, what is blocked and what the human still has to do. Use this whenever the user wants help applying, filling an application form, uploading a resume to a job posting, or preparing answers for an application, including "apply to this one for me" (you prepare; they submit).
+description: >-
+  Prepare a job application for an opening the user marked as interested. Open the application
+  form in the user's own Chrome, fill fields from confirmed background facts, upload the
+  designated resume, draft free-text answers for review, and stop before final submission with a
+  written record of what was filled, what is blocked and what the human still has to do. Use this
+  whenever the user wants help applying, filling an application form, uploading a resume to a job
+  posting, or preparing answers for an application, including "apply to this one for me" (you
+  prepare; they submit).
 argument-hint: "[opening id from a candidate file]"
 allowed-tools: Read Write Edit Glob Grep Bash(python3 *)
 ---
