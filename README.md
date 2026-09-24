@@ -2,14 +2,14 @@
 
 以个人偏好和可核实证据为起点的求职 agent skills。先通过深挖访谈弄清用户真正想要的工作方向，再带着方向找岗位、解释依据，最后把选中的申请准备到人工审阅与提交之前。
 
-**当前阶段：三个 skill 都已实现。访谈与找岗位各跑过一次真实端到端；填表的记录、事实确认与本地零提交表单已验证，真实浏览器操作需在你本机按 [Chrome 预检清单](docs/chrome-precheck.md) 验证。** 现状与证据见 [状态报告](docs/status-report.md)。
+**当前阶段：试用版（[PR #1](https://github.com/WItaZhang/job-right-skills/pull/1)）。三个 skill 都已实现。访谈与找岗位各跑过两次真实端到端；填表的记录、事实确认与本地零提交表单已验证，真实浏览器操作需在你本机按 [Chrome 预检清单](docs/chrome-precheck.md) 验证。** 现状与证据见 [状态报告](docs/status-report.md)。
 
 ## 三个 skill
 
 | skill | 做什么 | 状态 |
 |---|---|---|
-| `grill-direction` | 层层追问到本质，把方向写成 direction template；含义与强度分开确认 | 已实现，一次真实多轮访谈通过核心断言 |
-| `find-openings` | 读 template，公司 → 官方招聘板 → 岗位，按适用的已确认底线做 pass/fail/unknown | 已实现；对 Palantir 板端到端跑过一次，产出 6 个带证据的候选 |
+| `grill-direction` | 层层追问到本质，把方向写成 direction template；含义与强度分开确认 | 已实现，两次真实多轮访谈通过核心断言（含目标职级追问） |
+| `find-openings` | 读 template，公司 → 官方招聘板 → 岗位，按适用的已确认底线做 pass/fail/unknown | 已实现；对 Palantir 板端到端跑过两次，第二次实习/校招岗位不再进入候选 |
 | `prepare-application` | 在用户自己的 Chrome 里填表、传简历、起草自由题，停止在最终提交前 | 记录、事实导入确认、阻塞项与本地零提交表单已验证；Chrome 实操待本机 |
 
 ## 目录

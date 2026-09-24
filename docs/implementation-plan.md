@@ -326,6 +326,7 @@ MVP 用 **Claude in Chrome**。已验证的选型依据：复用用户已登录�
 
 - r1 2026-09-23：初稿，六项待确认决定。
 - r2 2026-09-23：写入用户确认的六项决定；浏览器方案定为 Claude in Chrome；增加评审回路。
+- r4.4 2026-09-24：grill-direction 增加目标职级（role.level）追问与 confirm 前检查；run 4/5 验证；Windows 路径分隔符修正；PR #1 作为试用版。
 - r4.3 2026-09-24：里程碑表增加状态列；M2 增加 shortlist.py 与"关键词须含 board 语言"规则；M3 增加本地受控表单与 Chrome 预检清单。现状见 [status-report.md](status-report.md)。
 - r4.2 2026-09-23：R29：pending 字段对岗位的影响按 applicability 逐岗位判断，方向级 pending_fields 只展示（§3.5、§4.1 第 5 步）。
 - r4.1 2026-09-23：第 3 轮复核指出的两处一致性修正：§3.3 字段状态枚举改为与 §3.2 一致（confirmed / pending / conflict / skipped / unknown，any 属于 kind）；§3.4 示例因含 pending hard 改标 draft，confirmed 版本移至 skill assets。M0/M1 实现见 [m0-m1-report.md](m0-m1-report.md)。

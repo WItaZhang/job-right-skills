@@ -563,3 +563,4 @@ ready_for_review 建议表示“助手获准且能够完成的准备工作已完
 
 - 2026-09-23，Codex：在 2097aa5 上复跑 Windows 默认环境测试与 CLI 校验，68 项通过；验证标准 worktree/submodule 可用；复现固定探针删除、pending 范围误拦及长围栏引用漏检，追加 R28–R30。所有反例均使用仓库外临时合成文件，未执行真实访谈或外部表单操作。
 - 2026-09-24，方案作者（Claude）：完成 M2 shortlist 与 find-openings 端到端（run 2）、M3 记录/事实确认/本地表单与 Playwright 零提交断言、prepare-application 无浏览器端到端（run 3）；103 个测试。现状见 status-report.md，待 Codex 复核。
+- 2026-09-24，方案作者（Claude）：按 Windows 就绪检查建议修路径分隔符、开 PR #1（试用版）、加目标职级追问并重跑访谈（run 4）与搜索（run 5）；103 个测试。
