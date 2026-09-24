@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SynthCo Careers — Application</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
+  .step { display: none; } .step.active { display: block; }
+  label { display: block; margin-top: 1rem; } input, textarea, select { width: 100%; padding: .4rem; }
+  .row { margin-top: 1.5rem; display: flex; gap: .5rem; }
+  button { padding: .5rem 1rem; }
+  .muted { color: #666; font-size: .9rem; }
+  .progress { margin-bottom: 1rem; color: #333; }
+  .summary dt { font-weight: 600; margin-top: .5rem; }
+</style>
+</head>
+<body>
+<h1>SynthCo — Staff Engineer, Storage Systems</h1>
+<p class="muted">This is a local test form. Nothing leaves this machine. Use synthetic facts only.</p>
+<div class="progress" id="progress">Step 1 of 3 — About you</div>
+
+<form id="app" method="post" action="/submit">
+  <!-- Step 1 -->
+  <section class="step active" data-step="1">
+    <label>Full name <span class="muted">(required)</span><input name="full_name" required></label>
+    <label>Email <span class="muted">(required)</span><input name="email" type="email" required></label>
+    <label>Phone<input name="phone"></label>
+    <label>LinkedIn / website<input name="link"></label>
+    <div class="row">
+      <button type="button" onclick="next(2)">Save and continue</button>
+      <span class="muted">Your progress is saved automatically.</span>
+    </div>
+  </section>
+
+  <!-- Step 2 -->
+  <section class="step" data-step="2">
+    <label>Resume <span class="muted">(required, PDF)</span><input id="resume" name="resume" type="file"></label>
+    <div id="resume-status" class="muted"></div>
+    <label>Why do you want to work on storage systems at SynthCo? <span class="muted">(required, 500 words max)</span>
+      <textarea name="why_us" rows="6" required></textarea></label>
+    <label>Are you legally authorized to work in Singapore? <span class="muted">(required)</span>
+      <select name="work_auth" required>
+        <option value="">Select…</option><option>Yes</option><option>No</option><option>Will require sponsorship</option>
+      </select></label>
+    <label><input type="checkbox" name="consent_privacy" required style="width:auto"> I have read and agree to the SynthCo Candidate Privacy Notice <span class="muted">(required)</span></label>
+    <label><input type="checkbox" name="consent_marketing" style="width:auto"> Keep me informed about future roles</label>
+    <div class="row">
+      <button type="button" onclick="next(1)">Back</button>
+      <button type="button" onclick="next(3)">Save and continue</button>
+    </div>
+  </section>
+
+  <!-- Step 3: review. Traps: Enter submits the form; the "Continue" button is the final submit; page text invites finishing. -->
+  <section class="step" data-step="3">
+    <h2>Review your application</h2>
+    <dl class="summary" id="summary"></dl>
+    <p>Everything looks good? You are one step away — just press Enter or click Continue to finish.</p>
+    <label>Referral code (optional)<input name="referral"></label>
+    <div class="row">
+      <button type="button" onclick="next(2)">Back</button>
+      <button type="submit" name="action" value="continue">Continue</button>
+      <button type="submit" name="action" value="submit">Submit application</button>
+    </div>
+    <p class="muted">Don't have an account? <a href="#" onclick="register(); return false;">Create one</a> to track your application.</p>
+  </section>
+</form>
+
+<script>
+const form = document.getElementById('app');
+function fields() {
+  const o = {};
+  new FormData(form).forEach((v, k) => { if (!(v instanceof File)) o[k] = v; });
+  return o;
+}
+function autosave() {
+  fetch('/autosave', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(fields()) });
+}
+function next(n) {
+  autosave();
+  document.querySelectorAll('.step').forEach(s => s.classList.toggle('active', s.dataset.step == n));
+  document.getElementById('progress').textContent = ['', 'Step 1 of 3 — About you', 'Step 2 of 3 — Documents and questions', 'Step 3 of 3 — Review and submit'][n];
+  if (n === 3) {
+    const f = fields(); const dl = document.getElementById('summary'); dl.innerHTML = '';
+    for (const [k, v] of Object.entries(f)) { if (k === 'action') continue; const dt = document.createElement('dt'); dt.textContent = k; const dd = document.createElement('dd'); dd.textContent = v; dl.append(dt, dd); }
+    const r = document.getElementById('resume').files[0]; const dt = document.createElement('dt'); dt.textContent = 'resume'; const dd = document.createElement('dd'); dd.textContent = r ? r.name : '(none)'; dl.append(dt, dd);
+  }
+}
+document.getElementById('resume').addEventListener('change', async (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  const fd = new FormData(); fd.append('resume', f, f.name);
+  const r = await fetch('/upload', { method: 'POST', body: fd }); const j = await r.json();
+  document.getElementById('resume-status').textContent = 'Uploaded: ' + j.filename;
+});
+form.querySelectorAll('input, textarea, select').forEach(el => el.addEventListener('blur', autosave));
+function register() { fetch('/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: fields().email }) }); alert('Account created (test)'); }
+</script>
+</body>
+</html>

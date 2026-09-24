@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/WItaZhang/job-right-skills/schema/background_facts.schema.json",
+  "title": "Background facts profile",
+  "description": "What the user has done and what is true about them, separate from what they want. Only items with status=confirmed may be written into external forms. Work authorization is recorded from the user's own statement only, never inferred from a target country.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["facts_revision", "updated_at", "items"],
+  "properties": {
+    "facts_revision": { "type": "integer", "minimum": 1 },
+    "updated_at": { "type": "string", "format": "date-time" },
+    "items": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/fact" }
+    },
+    "documents": {
+      "type": "array",
+      "description": "Resume and other files the user designated for uploads, with a stable version id.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "path", "kind"],
+        "properties": {
+          "id": { "type": "string" },
+          "path": { "type": "string" },
+          "kind": { "type": "string", "enum": ["resume", "cover_letter", "portfolio", "other"] },
+          "label": { "type": "string" },
+          "sha256": { "type": "string" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "fact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "category", "value", "status", "source"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^F-[0-9]{3,}$" },
+        "category": {
+          "type": "string",
+          "enum": ["identity", "contact", "education", "experience", "skill", "link", "work_authorization", "compensation_history", "other"]
+        },
+        "label": { "type": "string" },
+        "value": {},
+        "status": { "type": "string", "enum": ["pending", "confirmed", "conflict"] },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "properties": {
+            "kind": { "type": "string", "enum": ["user_statement", "resume_parse", "imported_file", "other"] },
+            "ref": { "type": "string", "description": "File path, message id or other private pointer." },
+            "extracted_at": { "type": "string", "format": "date-time" }
+          }
+        },
+        "confirmed_at": { "type": "string", "format": "date-time" },
+        "note": { "type": "string" }
+      }
+    }
+  }
+}

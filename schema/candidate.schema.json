@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/WItaZhang/job-right-skills/schema/candidate.schema.json",
+  "title": "Candidate list frontmatter for one direction",
+  "description": "Openings found for one direction revision, each with per-field results, evidence, opening status and the user's own decision. Matching a direction does not mean the opening is still open; match_status and opening_status are shown side by side.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["direction_id", "direction_revision", "basis", "generated_at", "candidates"],
+  "properties": {
+    "direction_id": { "type": "string", "pattern": "^dir-[0-9]{3,}$" },
+    "direction_revision": { "type": "integer", "minimum": 1 },
+    "facts_revision": { "type": ["integer", "null"], "minimum": 1 },
+    "basis": {
+      "type": "string",
+      "enum": ["confirmed", "exploratory"],
+      "description": "exploratory when the direction was still a draft."
+    },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "search_bias": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "deprioritize terms used during discovery. Disclosed so the user knows low-ranked openings were not judged against their hard fields."
+    },
+    "pending_fields": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Direction fields still awaiting confirmation at generation time. Display only: each must also appear in every candidate's applicability as not_applicable (with reason) or not_confirmed, and only not_confirmed affects match_status."
+    },
+    "candidates": { "type": "array", "items": { "$ref": "#/$defs/candidate" } }
+  },
+  "$defs": {
+    "ref": { "type": "string", "minLength": 1 },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["opening_id", "company_id", "provider", "match_status", "opening_status", "user_decision", "applicability", "field_results", "evidence"],
+      "properties": {
+        "opening_id": { "$ref": "#/$defs/ref" },
+        "id_source": { "type": "string", "enum": ["provider_native", "derived_from_url"] },
+        "company_id": { "$ref": "#/$defs/ref" },
+        "provider": { "type": "string", "enum": ["greenhouse", "ashby", "lever", "other"] },
+        "board": { "type": "string" },
+        "title": { "type": "string" },
+        "job_url": { "type": "string" },
+        "apply_url": { "type": ["string", "null"] },
+        "applicability": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["field_id", "state"],
+            "properties": {
+              "field_id": { "type": "string" },
+              "state": { "type": "string", "enum": ["applicable", "not_applicable", "not_confirmed"],
+                         "description": "applicable: confirmed hard field whose scope covers this opening. not_applicable: outside scope for this opening (reason required). not_confirmed: relevant to this opening but the direction has not confirmed it; blocks with needs_clarification." },
+              "reason": { "type": "string" }
+            }
+          }
+        },
+        "field_results": {
+          "type": "array",
+          "description": "Only applicable, confirmed hard fields appear here.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["field_id", "result", "evidence_refs"],
+            "properties": {
+              "field_id": { "type": "string" },
+              "result": { "type": "string", "enum": ["pass", "fail", "unknown"] },
+              "evidence_refs": { "type": "array", "items": { "$ref": "#/$defs/ref" } },
+              "note": { "type": "string" }
+            }
+          }
+        },
+        "soft_results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["field_id", "result"],
+            "properties": {
+              "field_id": { "type": "string" },
+              "result": { "type": "string", "enum": ["meets", "tradeoff", "unknown"] },
+              "evidence_refs": { "type": "array", "items": { "$ref": "#/$defs/ref" } },
+              "note": { "type": "string" }
+            }
+          }
+        },
+        "match_status": {
+          "type": "string",
+          "enum": ["rejected", "needs_clarification", "needs_verification", "eligible_for_comparison"]
+        },
+        "match_reason": { "type": "string" },
+        "opening_status": { "type": "string", "enum": ["published_present", "explicitly_closed", "unknown"] },
+        "freshness_status": { "type": "string", "enum": ["current", "stale", "unknown"] },
+        "last_successful_check_at": { "type": ["string", "null"], "format": "date-time" },
+        "needs_recheck": { "type": "boolean" },
+        "recheck_reason": { "type": "string" },
+        "user_decision": {
+          "type": "string",
+          "enum": ["undecided", "interested", "not_interested"],
+          "description": "Written by the user only."
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "source_url", "claim", "checked_at", "retrieval_status"],
+            "properties": {
+              "id": { "$ref": "#/$defs/ref" },
+              "source_url": { "type": "string" },
+              "publisher": { "type": "string" },
+              "claim": { "type": "string", "description": "The single assertion this evidence supports, with a locator where possible." },
+              "snapshot_ref": { "type": "string", "description": "Path under workspace evidence/ directory." },
+              "checked_at": { "type": "string", "format": "date-time" },
+              "retrieval_status": { "type": "string", "enum": ["success", "partial", "failed", "not_checked"] },
+              "coverage": { "type": "string" },
+              "source_published_at": { "type": ["string", "null"] },
+              "source_updated_at": { "type": ["string", "null"] }
+            }
+          }
+        }
+      }
+    }
+  }
+}

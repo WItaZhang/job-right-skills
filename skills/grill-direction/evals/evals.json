@@ -1,0 +1,82 @@
+{
+  "skill_name": "grill-direction",
+  "note": "Not yet run as of 2026-09-23. These evals feed a simulated interview transcript to the skill and ask it to (a) write the direction file(s) and (b) state the next questions. They check the semantic rules the validator cannot: meaning vs strength, following the user's reason, scope before conflict, no invented hard lines, no premature conflict. Workspace root for runs is given inline so no real profile is touched. Transcript-based evals cannot exercise the live frontier, periodic readback or pause/resume; at least one real multi-turn session with a scripted user persona is required before M1 is called verified (review R27).",
+  "evals": [
+    {
+      "id": 1,
+      "name": "same-sentence-city-profile",
+      "prompt": "Use JOB_RIGHT_WORKSPACE=/tmp/jr-eval-1. Below is a transcript of an interview so far with a job seeker (synthetic). Continue the grill-direction workflow: write the direction file(s) that this transcript supports, and list the next 1-3 questions you would ask, in the order you would ask them.\n\nUser: 我想去美国做 AI 相关的工作。\nAssistant: 美国哪一点最吸引你？如果只能留一个原因，是什么？\nUser: 其实是想要那种年轻人多、大家都在做 tech 的感觉，像硅谷那样。\nAssistant: 那么深圳、新加坡这类同样年轻、科技公司密集的城市，可以吗？\nUser: 可以啊，深圳我去过，那种感觉挺像的。新加坡也行。\nAssistant: 如果一个岗位其他都很好，但城市没有这种氛围，你还会拒绝吗？\nUser: 嗯……看情况吧，如果内容特别对、钱也够多，可能会去。\nAssistant: 工作内容上呢？\nUser: AI infra 或开发者工具，必须是这个方向，别的我不做，试过了不行。",
+      "expected_output": "A draft direction file where location.city_profile is kind=soft (the user hedged on strength), not hard; industry is hard only if the transcript is read as a refusal statement, otherwise pending; no key_fields confirmed yet; the next question tests industry strength or alt-tests industry.",
+      "files": [],
+      "expectations": [
+        "The written direction file passes scripts/validate.py direction with --mode auto (it must be status: draft)",
+        "location.city_profile has kind soft or unspecified, NOT hard, because the user answered the strength question with 'depends'",
+        "location.city_profile has an alt_test_ref pointing to the Shenzhen/Singapore exchange",
+        "industry field exists with value covering AI infra / developer tools",
+        "No field has kind hard together with status confirmed unless it has a hard_confirmation_ref that cites an exchange where the user said they would refuse",
+        "key_fields is empty or contains only confirmed hard fields",
+        "The next questions include a strength or alternative test for industry rather than opening a new dimension"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "same-sentence-family-reason",
+      "prompt": "Use JOB_RIGHT_WORKSPACE=/tmp/jr-eval-2. Below is a transcript of an interview so far with a job seeker (synthetic). Continue the grill-direction workflow: write the direction file(s) that this transcript supports, and list the next 1-3 questions.\n\nUser: 我想在美国找 AI 相关的工作。\nAssistant: 美国哪一点最吸引你？\nUser: 不是机会的问题，我父母在这边，身体不太好，我得留在美国。\nAssistant: 那如果温哥华或者别的科技城市有很好的岗位，可以吗？\nUser: 不行，我得能在一天之内到他们那儿。\nAssistant: 如果一个岗位其他都好，但在美国以外，你会拒绝吗？\nUser: 会拒绝，这个没得谈。\nAssistant: 城市本身呢，你在乎它是不是科技氛围浓的城市吗？\nUser: 无所谓。\nAssistant: 角色上想继续做 IC 还是带团队？\nUser: 这个先跳过吧。",
+      "expected_output": "A draft direction file with location.country = US as kind=hard status=confirmed with alt_test_ref and hard_confirmation_ref; location.city_profile as kind=any; role.nature as status=skipped; no city-atmosphere hard field; the next question does not re-ask role.",
+      "files": [],
+      "expectations": [
+        "The written direction file passes scripts/validate.py direction",
+        "A field for country (e.g. location.country) exists with value US, kind hard, status confirmed, and both alt_test_ref and hard_confirmation_ref",
+        "No field describes city atmosphere as hard; if a city_profile field exists it has kind any",
+        "role.nature (or equivalent) has status skipped and is not among the next questions",
+        "The direction remains status draft (only one confirmed hard field) and the output does not invent a second hard field to reach the key_fields minimum",
+        "No field records work authorization or visa status"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "scope-not-conflict-and-unproven-tension",
+      "prompt": "Use JOB_RIGHT_WORKSPACE=/tmp/jr-eval-3. Below is a transcript (synthetic). Continue the grill-direction workflow: update or write the direction file and state how you handle the two apparent tensions.\n\nUser: 我现在必须全远程，我在照顾小孩，这个没法商量。\nAssistant: 如果其他条件都好但要每周到岗，你会拒绝吗？\nUser: 会。\nAssistant: 这个情况会持续多久？\nUser: 到明年 9 月小孩上学以后就可以混合办公了。\nUser: 另外我想进一家 20 人以下的早期公司，这个也是必须的，我只想在小团队里做。\nAssistant: 如果一家 200 人的公司里有一个 6 人的独立小组，可以吗？\nUser: 不行，我要的是公司整体就小。\nAssistant: 其他都好但公司 200 人，你会拒绝吗？\nUser: 会。\nUser: 对了，我还必须要有股权价值至少能到 50 万美元的那种规模的公司，这个也是必须的，小公司股权不值钱的我不去。",
+      "expected_output": "Remote-now and hybrid-later are two scoped fields, not a conflict. company.size (<20) stays a confirmed hard field. The equity statement is recorded as a pending field whose meaning is unclear (valuation basis, vesting, what 'worth 500k' means) and the user's claim that small-company equity is worthless is treated as something to probe, not as proof that the two conditions exclude each other. Nothing is marked conflict yet; the file stays draft and is not split.",
+      "files": [],
+      "expectations": [
+        "The written direction file passes scripts/validate.py direction",
+        "Remote requirement has a scope (valid_until or note about September next year) and the later hybrid preference is a separate field with valid_from; neither is marked conflict",
+        "company.size (<20) is kind hard, status confirmed, with alt_test_ref and hard_confirmation_ref",
+        "The equity requirement exists as a field with status pending (its meaning and strength unconfirmed); it is NOT marked conflict and company.size is NOT marked conflict",
+        "Neither company.size nor the equity field is dropped, softened or overridden",
+        "The direction is not split into two files",
+        "The next question probes what the equity requirement means (basis of the 500k figure, vesting, whether a small company could satisfy it) rather than announcing that the two conditions are incompatible or choosing for the user"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "pause-and-resume",
+      "prompt": "Use JOB_RIGHT_WORKSPACE=/tmp/jr-eval-4. First copy skills/grill-direction/assets/example-synthetic-family-us.md to /tmp/jr-eval-4/directions/dir-002.md (create dirs as needed). Then, following grill-direction, resume that direction. The user's first message on resuming is: '我回来了，继续吧。' Produce your next message to the user and, if any file change is warranted before they answer, describe it.",
+      "expected_output": "The assistant reads the existing file, does not re-ask role.nature (skipped), does not re-ask city atmosphere (any), and asks the strength of location.commute_to_family (the pending hard field named in open_questions). No file change before the user answers.",
+      "files": [],
+      "expectations": [
+        "The next question is about the strength of location.commute_to_family (is the 90-minute drive a hard line or a wish)",
+        "role.nature is not re-asked",
+        "location.city_profile is not re-asked",
+        "The file is not modified before the user answers (revision stays 2)",
+        "The assistant tells the user the direction is currently a draft with one confirmed hard field"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "true-same-scope-hard-conflict",
+      "prompt": "Use JOB_RIGHT_WORKSPACE=/tmp/jr-eval-5. Below is a transcript (synthetic). Continue the grill-direction workflow: write the direction file and state your next message.\n\nUser: 我必须每周至少三天到办公室，我在家完全没法工作，这是底线。\nAssistant: 如果一个岗位其他都很好但只提供全远程，你会拒绝吗？\nUser: 会，我试过全远程，半年就崩了。\nAssistant: 这个要求从什么时候开始、到什么时候？\nUser: 现在开始，一直都是。\nUser: 还有，我从下个月起就搬到山里的老家了，那边一百公里内没有任何公司，我也不打算再搬，所以我只能接受完全不需要到岗的工作，这也是底线。\nAssistant: 如果一个岗位其他都很好但要求每周到岗一天，你会拒绝吗？\nUser: 会，我根本到不了。",
+      "expected_output": "Both requirements are confirmed hard in the same time scope and cannot both hold. Both fields are marked status conflict with conflicts_with pointing at each other. The file stays draft. The assistant does not pick one, does not assume the later statement overrides the earlier one, does not split into two directions, and asks the single smallest question that would change the judgement (for example whether one of the two is actually about something else, or which one the user would revise).",
+      "files": [],
+      "expectations": [
+        "The written direction file passes scripts/validate.py direction and has status draft",
+        "Both the onsite-3-days requirement and the fully-remote requirement exist as separate fields, each kind hard with hard_confirmation_ref",
+        "Both fields are status conflict and each lists the other in conflicts_with",
+        "Neither field is removed, downgraded to soft, or overwritten by the other",
+        "The direction is not split into two files",
+        "The next message names the conflict plainly and asks one question that lets the user resolve it; it does not recommend which side to drop"
+      ]
+    }
+  ]
+}

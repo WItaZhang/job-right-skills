@@ -1,0 +1,31 @@
+{
+  "jobs": [
+    {
+      "absolute_url": "https://boards.greenhouse.io/synthco/jobs/4001",
+      "internal_job_id": 9001,
+      "location": { "name": "Singapore" },
+      "metadata": [ { "id": 1, "name": "Workplace", "value": "Hybrid", "value_type": "single_select" } ],
+      "id": 4001,
+      "updated_at": "2026-09-20T08:15:00-04:00",
+      "requisition_id": "R-77",
+      "title": "Senior Infrastructure Engineer, Training Systems",
+      "content": "&lt;p&gt;You will own the &lt;strong&gt;distributed training&lt;/strong&gt; stack. This is an individual contributor role reporting to the Head of Infra.&lt;/p&gt;&lt;ul&gt;&lt;li&gt;Hybrid, 3 days in office&lt;/li&gt;&lt;/ul&gt;",
+      "departments": [ { "id": 1, "name": "Engineering", "child_ids": [], "parent_id": null } ],
+      "offices": [ { "id": 10, "name": "Singapore", "location": "Singapore" }, { "id": 11, "name": "Shenzhen", "location": "Shenzhen, China" } ]
+    },
+    {
+      "absolute_url": "https://boards.greenhouse.io/synthco/jobs/4002",
+      "internal_job_id": null,
+      "location": { "name": null },
+      "metadata": null,
+      "id": 4002,
+      "updated_at": "2026-08-01T00:00:00-04:00",
+      "requisition_id": null,
+      "title": "General Application - Infrastructure",
+      "content": "&lt;p&gt;Don't see a fit? Tell us about yourself.&lt;/p&gt;",
+      "departments": [],
+      "offices": []
+    }
+  ],
+  "meta": { "total": 2 }
+}

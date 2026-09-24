@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/WItaZhang/job-right-skills/schema/direction.schema.json",
+  "title": "Direction template frontmatter",
+  "description": "Structured part of one job-search direction. The Markdown body holds the interview chain (## 追问链) and the revision log (## 修订记录). Cross-field rules (key_fields must be confirmed hard fields, refs must exist in the chain, confirmed directions may not contain pending hard fields) are enforced by scripts/validate.py, not by this schema.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "title", "revision", "status", "created_at", "key_fields", "fields", "interview_progress"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^dir-[0-9]{3,}$" },
+    "title": { "type": "string", "minLength": 1 },
+    "revision": { "type": "integer", "minimum": 1 },
+    "status": { "type": "string", "enum": ["draft", "confirmed"] },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" },
+    "key_fields": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/fieldId" },
+      "uniqueItems": true
+    },
+    "fields": {
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/fieldId" },
+      "additionalProperties": { "$ref": "#/$defs/field" }
+    },
+    "search_hints": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "keywords": { "type": "array", "items": { "type": "string" } },
+        "deprioritize": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Discovery-ranking hints only. Never evidence for rejecting an opening."
+        }
+      }
+    },
+    "open_questions": { "type": "array", "items": { "type": "string" } },
+    "interview_progress": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["asked", "not_asked"],
+      "properties": {
+        "asked": { "type": "array", "items": { "$ref": "#/$defs/dimension" }, "uniqueItems": true },
+        "not_asked": { "type": "array", "items": { "$ref": "#/$defs/dimension" }, "uniqueItems": true }
+      }
+    },
+    "split_from": {
+      "type": "string",
+      "pattern": "^dir-[0-9]{3,}$",
+      "description": "Set when this direction was split off another one after the user confirmed both routes are independently acceptable."
+    }
+  },
+  "$defs": {
+    "fieldId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)*$",
+      "description": "Dotted path such as location.city_profile. Each id is one independently confirmable condition."
+    },
+    "interviewRef": {
+      "type": "string",
+      "pattern": "^I-[0-9]{3,}$",
+      "description": "Reference to one entry in the ## 追问链 section of the same file."
+    },
+    "dimension": {
+      "type": "string",
+      "enum": ["兴趣动力", "人生方向", "压力承受", "风险容忍", "角色与成长", "地点与时间", "薪酬与身份", "团队环境"]
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "valid_from": { "type": "string", "description": "ISO date or YYYY-MM. Field does not apply to openings judged before this." },
+        "valid_until": { "type": "string" },
+        "roles": { "oneOf": [ { "type": "string", "const": "all" }, { "type": "array", "items": { "type": "string" } } ] },
+        "locations": { "type": "array", "items": { "type": "string" } },
+        "note": { "type": "string" }
+      }
+    },
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "status", "source_ref"],
+      "properties": {
+        "value": {},
+        "kind": {
+          "type": "string",
+          "enum": ["hard", "soft", "any", "unspecified"],
+          "description": "Nature of the preference. any = user confirmed no preference. unspecified = strength not yet asked or answered."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["confirmed", "pending", "conflict", "skipped", "unknown"],
+          "description": "Confirmation state. skipped = user chose to skip. unknown = user said they do not know."
+        },
+        "scope": { "$ref": "#/$defs/scope" },
+        "observable_criteria": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "User-endorsed observable evidence for an abstract attribute. Required in spirit for abstract values; validated by behaviour evals, not here."
+        },
+        "examples": { "type": "array", "items": {}, "description": "Illustrative examples. Not a restriction." },
+        "allowed_values": { "type": "array", "items": {}, "description": "A closed list. Only when the user explicitly limited the set." },
+        "source_ref": { "$ref": "#/$defs/interviewRef" },
+        "alt_test_ref": { "oneOf": [ { "$ref": "#/$defs/interviewRef" }, { "type": "null" } ] },
+        "hard_confirmation_ref": { "oneOf": [ { "$ref": "#/$defs/interviewRef" }, { "type": "null" } ] },
+        "rationale": { "type": "string" },
+        "note": { "type": "string" },
+        "conflicts_with": { "type": "array", "items": { "$ref": "#/$defs/fieldId" } }
+      }
+    }
+  }
+}

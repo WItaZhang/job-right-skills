@@ -1,28 +1,44 @@
 # job-right-skills
 
-以个人偏好和可核实证据为起点的求职 agent skills 研究项目。
+以个人偏好和可核实证据为起点的求职 agent skills。先通过深挖访谈弄清用户真正想要的工作方向，再带着方向找岗位、解释依据，最后把选中的申请准备到人工审阅与提交之前。
 
-**当前阶段：reference only。** 本仓库整理公开项目、一手文档和原创设计比较；尚未实现完整 agent，也没有实际运行岗位匹配或投递功能。
+**当前阶段：试用版（[PR #1](https://github.com/WItaZhang/job-right-skills/pull/1)）。三个 skill 都已实现。访谈与找岗位各跑过两次真实端到端；填表的记录、事实确认与本地零提交表单已验证，真实浏览器操作需在你本机按 [Chrome 预检清单](docs/chrome-precheck.md) 验证。** 现状与证据见 [状态报告](docs/status-report.md)。
 
-研究链路：兴趣／人生方向／压力与风险容忍度 → 结构化 preference profile → 硬约束与软偏好 → 冲突澄清 → company → team → current opening → 带来源、核实时间、匹配理由、置信度与 unknown 的解释。
+## 三个 skill
 
-从 [reference 索引](reference/README.md) 开始；优先阅读 [设计映射](reference/design-notes.md)、[偏好档案与冲突澄清](reference/design/preference-profile.md)、[研究链路与证据规则](reference/design/research-evidence.md)。
+| skill | 做什么 | 状态 |
+|---|---|---|
+| `grill-direction` | 层层追问到本质，把方向写成 direction template；含义与强度分开确认 | 已实现，两次真实多轮访谈通过核心断言（含目标职级追问） |
+| `find-openings` | 读 template，公司 → 官方招聘板 → 岗位，按适用的已确认底线做 pass/fail/unknown | 已实现；对 Palantir 板端到端跑过两次，第二次实习/校招岗位不再进入候选 |
+| `prepare-application` | 在用户自己的 Chrome 里填表、传简历、起草自由题，停止在最终提交前 | 记录、事实导入确认、阻塞项与本地零提交表单已验证；Chrome 实操待本机 |
+
+## 目录
 
 ```text
-README.md
-LICENSE
-.gitignore
-reference/
-  README.md                 # 筛选方法、参考目录、阅读顺序
-  sources.json              # 来源、版本、核实时间与阅读范围
-  design-notes.md           # 需求与参考机制的对应关系
-  projects/                 # 8 项项目笔记，含 2 项受限/待核实条目
-  primary/                  # 6 份官方文档/论文，汇总为 3 篇笔记
-  design/                   # profile、冲突、证据及状态的研究结论
+.claude-plugin/plugin.json      # plugin 清单：job-right
+skills/<name>/SKILL.md          # 三个 skill；grill-direction 含 references/ assets/ evals/
+schema/*.schema.json            # direction / candidate / application / background_facts
+scripts/resolve_workspace.py    # 私人 workspace 解析、创建与保护
+scripts/validate.py             # 按 schema 与跨字段规则校验
+tests/                          # pytest：正反例
+docs/                           # 方案、评审、状态报告、live-runs 证据、Chrome 预检清单
+reference/                      # 研究笔记（设计依据）
 ```
 
-每项参考说明“可借鉴机制／不应照搬之处／对 job-right-skills 的映射”。个人经历、身份和偏好未提供时保持 unknown；文中的演示案例均为 synthetic，不代表用户事实。
+## 运行
 
-本项目原名 `career-scout-skills`，2026-09-22 改名为 `job-right-skills`，保留原提交历史。最新文献核实日期为 2026-09-22（America/Los_Angeles）。没有复制上游实现，没有投递岗位或联系公司。
+```bash
+pip install -r requirements.txt
+python3 -m pytest tests -q
+python3 scripts/validate.py direction skills/grill-direction/assets/example-synthetic-city-profile.md
+```
 
-原创笔记沿用本仓库 MIT 许可证；第三方来源保留各自许可。真实个人档案不放入公开仓库。
+私人运行数据放在用户自己选择的工作仓库的 `workspace/` 下（或 `JOB_RIGHT_WORKSPACE` 指定的目录），由 workspace 自带的 `.gitignore` 保护；插件目录只放代码与资产。
+
+## 阅读顺序
+
+1. [项目说明](docs/project-overview.md)：普通读者版。
+2. [实现方案 r4](docs/implementation-plan.md) 与 [评审记录](docs/implementation-plan-review.md)。
+3. [reference 索引](reference/README.md)：研究依据。
+
+`assets/` 与 `tests/` 中的人物、原话、公司均为 synthetic，不代表任何真实用户。真实个人档案不放入公开仓库。原创内容沿用 MIT 许可证；第三方来源保留各自许可。

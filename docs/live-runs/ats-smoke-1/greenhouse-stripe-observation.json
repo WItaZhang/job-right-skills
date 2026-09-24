@@ -1,0 +1,28 @@
+{
+  "provider": "greenhouse",
+  "board": "stripe",
+  "company_id": "stripe",
+  "check_id": "20260923T233236.498091Z-2fcb5a",
+  "checked_at": "2026-09-23T23:32:36+00:00",
+  "retrieval_status": "success",
+  "coverage": {
+    "pages_requested": 1,
+    "pages_ok": 1,
+    "paginated": false,
+    "complete": true
+  },
+  "postings_seen": 694,
+  "openings_written": 694,
+  "pages": [
+    {
+      "index": 0,
+      "url": "https://boards-api.greenhouse.io/v1/boards/stripe/jobs?content=true",
+      "status": "success",
+      "http_status": 200,
+      "error": null,
+      "raw": "page-0.raw",
+      "count": 694
+    }
+  ],
+  "note": null
+}

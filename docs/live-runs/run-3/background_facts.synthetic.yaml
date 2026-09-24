@@ -1,0 +1,98 @@
+facts_revision: 2
+updated_at: '2026-09-24T00:45:00+00:00'
+items:
+  - id: F-001
+    category: identity
+    label: Full name
+    value: LIN Xiaoxi
+    status: confirmed
+    source:
+      kind: resume_parse
+      ref: incoming/synthetic-resume.txt
+      extracted_at: '2026-09-24T00:30:00+00:00'
+    confirmed_at: '2026-09-24T00:45:00+00:00'
+  - id: F-002
+    category: contact
+    label: Email
+    value: xiaoxi.lin@example.test
+    status: confirmed
+    source:
+      kind: resume_parse
+      ref: incoming/synthetic-resume.txt
+      extracted_at: '2026-09-24T00:30:00+00:00'
+    confirmed_at: '2026-09-24T00:45:00+00:00'
+  - id: F-003
+    category: contact
+    label: Phone
+    value: '+65 8000 0000'
+    status: confirmed
+    source:
+      kind: resume_parse
+      ref: incoming/synthetic-resume.txt
+      extracted_at: '2026-09-24T00:30:00+00:00'
+    confirmed_at: '2026-09-24T00:45:00+00:00'
+  - id: F-004
+    category: link
+    label: GitHub
+    value: github.com/xiaoxi-synthetic
+    status: confirmed
+    source:
+      kind: resume_parse
+      ref: incoming/synthetic-resume.txt
+      extracted_at: '2026-09-24T00:30:00+00:00'
+    confirmed_at: '2026-09-24T00:45:00+00:00'
+  - id: F-005
+    category: experience
+    label: Current role
+    value: 'Senior Software Engineer, Infrastructure — Fictional Cloud Ltd, Singapore, 2022-03 to present. Owns the distributed training job scheduler (Go/Python), 4,000 GPUs, cut p99 queueing latency 41%. IC role; tech lead for a 3-person project, no people management.'
+    status: confirmed
+    source:
+      kind: resume_parse
+      ref: incoming/synthetic-resume.txt
+      extracted_at: '2026-09-24T00:30:00+00:00'
+    confirmed_at: '2026-09-24T00:45:00+00:00'
+  - id: F-006
+    category: experience
+    label: Prior role
+    value: 'Software Engineer — Imaginary Data Co, Shenzhen, 2019-07 to 2022-02. Built the storage tiering service for a petabyte-scale object store.'
+    status: confirmed
+    source:
+      kind: resume_parse
+      ref: incoming/synthetic-resume.txt
+      extracted_at: '2026-09-24T00:30:00+00:00'
+    confirmed_at: '2026-09-24T00:45:00+00:00'
+  - id: F-007
+    category: education
+    label: Degree
+    value: 'B.Eng. Computer Science, Made-Up University, 2015-2019'
+    status: confirmed
+    source:
+      kind: resume_parse
+      ref: incoming/synthetic-resume.txt
+      extracted_at: '2026-09-24T00:30:00+00:00'
+    confirmed_at: '2026-09-24T00:45:00+00:00'
+  - id: F-008
+    category: skill
+    label: Skills
+    value: 'Go, Python, Rust, Kubernetes, distributed systems, performance engineering'
+    status: confirmed
+    source:
+      kind: resume_parse
+      ref: incoming/synthetic-resume.txt
+      extracted_at: '2026-09-24T00:30:00+00:00'
+    confirmed_at: '2026-09-24T00:45:00+00:00'
+  - id: F-009
+    category: work_authorization
+    label: Work authorization
+    value: 'Singapore Permanent Resident; does not require sponsorship to work in Singapore.'
+    status: confirmed
+    source:
+      kind: user_statement
+      extracted_at: '2026-09-24T00:45:00+00:00'
+    confirmed_at: '2026-09-24T00:45:00+00:00'
+    note: 'Synthetic test persona statement. Scope is Singapore only — no statement was made about authorization to work in any other country (e.g. the US, if this role is US-based), so that remains unconfirmed and must not be inferred.'
+documents:
+  - id: doc-resume-01
+    path: incoming/synthetic-resume.txt
+    kind: resume
+    label: Synthetic resume (LIN Xiaoxi)
