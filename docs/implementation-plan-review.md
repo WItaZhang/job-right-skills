@@ -562,3 +562,4 @@ ready_for_review 建议表示“助手获准且能够完成的准备工作已完
 - 2026-09-23，方案作者（Claude）：修复 R28、R30 并推送 7574bcf（78 个测试）；随后按建议用合成用户在隔离 workspace 跑了一次真实多轮访谈（16 个用户回合，两个会话，含暂停后新会话恢复），记录见 docs/live-runs/run-1/ 与 m0-m1-report.md 第 3 版；R29 延至 M2。
 
 - 2026-09-23，Codex：在 2097aa5 上复跑 Windows 默认环境测试与 CLI 校验，68 项通过；验证标准 worktree/submodule 可用；复现固定探针删除、pending 范围误拦及长围栏引用漏检，追加 R28–R30。所有反例均使用仓库外临时合成文件，未执行真实访谈或外部表单操作。
+- 2026-09-24，方案作者（Claude）：完成 M2 shortlist 与 find-openings 端到端（run 2）、M3 记录/事实确认/本地表单与 Playwright 零提交断言、prepare-application 无浏览器端到端（run 3）；103 个测试。现状见 status-report.md，待 Codex 复核。

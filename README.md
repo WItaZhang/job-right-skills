@@ -2,15 +2,15 @@
 
 以个人偏好和可核实证据为起点的求职 agent skills。先通过深挖访谈弄清用户真正想要的工作方向，再带着方向找岗位、解释依据，最后把选中的申请准备到人工审阅与提交之前。
 
-**当前阶段：M0 脚手架、M1 访谈 skill、M2 岗位采集脚本已实现；访谈行为跑过一次合成用户真实多轮会话，采集脚本对三家公开招聘板在线冒烟通过；find-openings 端到端与浏览器填表尚未验证。** 详见 [M0/M1 报告](docs/m0-m1-report.md)。
+**当前阶段：三个 skill 都已实现。访谈与找岗位各跑过一次真实端到端；填表的记录、事实确认与本地零提交表单已验证，真实浏览器操作需在你本机按 [Chrome 预检清单](docs/chrome-precheck.md) 验证。** 现状与证据见 [状态报告](docs/status-report.md)。
 
 ## 三个 skill
 
 | skill | 做什么 | 状态 |
 |---|---|---|
 | `grill-direction` | 层层追问到本质，把方向写成 direction template；含义与强度分开确认 | 已实现，一次真实多轮访谈通过核心断言 |
-| `find-openings` | 读 template，公司 → 官方招聘板 → 岗位，按适用的已确认底线做 pass/fail/unknown | 采集脚本已实现并在线冒烟；工作流未端到端验证 |
-| `prepare-application` | 在用户自己的 Chrome 里填表、传简历、起草自由题，停止在最终提交前 | 骨架 |
+| `find-openings` | 读 template，公司 → 官方招聘板 → 岗位，按适用的已确认底线做 pass/fail/unknown | 已实现；对 Palantir 板端到端跑过一次，产出 6 个带证据的候选 |
+| `prepare-application` | 在用户自己的 Chrome 里填表、传简历、起草自由题，停止在最终提交前 | 记录、事实导入确认、阻塞项与本地零提交表单已验证；Chrome 实操待本机 |
 
 ## 目录
 
@@ -21,7 +21,7 @@ schema/*.schema.json            # direction / candidate / application / backgrou
 scripts/resolve_workspace.py    # 私人 workspace 解析、创建与保护
 scripts/validate.py             # 按 schema 与跨字段规则校验
 tests/                          # pytest：正反例
-docs/                           # 方案、评审、报告、普通读者说明
+docs/                           # 方案、评审、状态报告、live-runs 证据、Chrome 预检清单
 reference/                      # 研究笔记（设计依据）
 ```
 

@@ -154,3 +154,53 @@ def test_cli(tmp_path, capsys):
     assert "lever:synthco:0f1e2d3c-0000-4000-8000-000000000001" in out
     code = ats_fetch.main(["--provider", "lever", "--board", "synthco", "--workspace", str(tmp_path), "--fixture", str(FIX / "error-404.error.json")])
     assert code == 1
+
+
+# ------------------------------------------------------------------ shortlist
+
+import shortlist  # noqa: E402
+
+DIRECTION = ROOT / "skills" / "grill-direction" / "assets" / "example-synthetic-city-profile.md"
+RUN1_DIRECTION = ROOT / "docs" / "live-runs" / "run-1" / "dir-001.final.md"
+
+
+def test_shortlist_ranks_and_pushes_down(tmp_path):
+    for f in ["greenhouse-sample.json", "ashby-sample.json", "lever-sample.json"]:
+        prov = f.split("-")[0]
+        ats_fetch.fetch_board(prov, "synthco", tmp_path, "synthco", [FIX / f])
+    direction = shortlist.load_direction(tmp_path, str(DIRECTION))
+    res = shortlist.shortlist(tmp_path, direction, None, None, 10, 1, extra_keywords=["storage"])
+    assert res["scanned"] == 6
+    ids = [r["opening_id"] for r in res["shortlist"]]
+    # infra / storage / inference roles score; the manager role is pushed down, not dropped
+    assert "lever:synthco:0f1e2d3c-0000-4000-8000-000000000001" in ids
+    assert "ashby:synthco:a1b2c3d4-0000-4000-8000-000000000001" in ids
+    # JD body mentioning "Head of Infra" must not push an IC role down
+    assert "greenhouse:synthco:4001" in ids
+    pushed = {r["opening_id"]: r for r in res["pushed_down"]}
+    assert "ashby:synthco:a1b2c3d4-0000-4000-8000-000000000002" in pushed
+    assert any("manager" in t.lower() or "管理" in t for t in pushed["ashby:synthco:a1b2c3d4-0000-4000-8000-000000000002"]["deprioritized_by"])
+    assert res["search_bias"] == direction["search_hints"]["deprioritize"]
+    for r in res["shortlist"]:
+        assert r["snapshot"].startswith("evidence/openings/")
+
+
+def test_shortlist_cli_filters_by_provider(tmp_path, capsys):
+    ats_fetch.fetch_board("lever", "synthco", tmp_path, "synthco", [FIX / "lever-sample.json"])
+    ats_fetch.fetch_board("ashby", "synthco", tmp_path, "synthco", [FIX / "ashby-sample.json"])
+    code = shortlist.main(["--workspace", str(tmp_path), "--direction", str(DIRECTION), "--provider", "lever", "--json"])
+    assert code == 0
+    out = json.loads(capsys.readouterr().out)
+    assert out["scanned"] == 2 and all(r["opening_id"].startswith("lever:") for r in out["shortlist"])
+
+
+def test_shortlist_chinese_only_hints_need_extra_keywords(tmp_path):
+    """Live run 1 wrote Chinese-only keywords; against English boards nothing matches until the agent adds
+    board-language terms, and those terms are recorded."""
+    ats_fetch.fetch_board("lever", "synthco", tmp_path, "synthco", [FIX / "lever-sample.json"])
+    direction = shortlist.load_direction(tmp_path, str(RUN1_DIRECTION))
+    bare = shortlist.shortlist(tmp_path, direction, None, None, 10, 1)
+    assert bare["shortlist"] == []
+    res = shortlist.shortlist(tmp_path, direction, None, None, 10, 1, extra_keywords=["storage", "distributed"])
+    assert [r["opening_id"] for r in res["shortlist"]] == ["lever:synthco:0f1e2d3c-0000-4000-8000-000000000001"]
+    assert res["terms"]["extra_keywords"] == ["storage", "distributed"]

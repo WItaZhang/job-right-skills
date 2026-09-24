@@ -29,7 +29,7 @@ The frontmatter is a snapshot. It is overwritten on each revision. History is in
 | `created_at`, `updated_at` | Timestamps with time zone |
 | `key_fields` | 2–4 field ids that are the essence of the direction. Must be confirmed hard fields. Used for the title and for search focus. All confirmed hard fields still participate in filtering; key fields are not the only ones checked |
 | `fields` | Map of field id → field record |
-| `search_hints.keywords` | Discovery terms for find-openings |
+| `search_hints.keywords` | Discovery terms for find-openings, in the user's language and in English job-board vocabulary |
 | `search_hints.deprioritize` | Terms that lower discovery ranking. Never evidence for rejecting an opening; disclosed to the user as search bias |
 | `open_questions` | What you would ask next |
 | `interview_progress.asked` / `not_asked` | Dimensions touched vs. untouched. Progress, not field status |

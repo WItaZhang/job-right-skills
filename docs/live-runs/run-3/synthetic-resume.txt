@@ -1,0 +1,15 @@
+LIN Xiaoxi (synthetic test persona)
+Email: xiaoxi.lin@example.test | Phone: +65 8000 0000 | github.com/xiaoxi-synthetic
+
+EXPERIENCE
+Senior Software Engineer, Infrastructure — Fictional Cloud Ltd, Singapore, 2022-03 to present
+- Own the distributed training job scheduler (Go/Python), 4,000 GPUs, p99 queueing latency cut 41%.
+- IC role; tech lead for a 3-person project without people management.
+Software Engineer — Imaginary Data Co, Shenzhen, 2019-07 to 2022-02
+- Built the storage tiering service for a petabyte-scale object store.
+
+EDUCATION
+B.Eng. Computer Science, Made-Up University, 2015-2019
+
+SKILLS
+Go, Python, Rust, Kubernetes, distributed systems, performance engineering

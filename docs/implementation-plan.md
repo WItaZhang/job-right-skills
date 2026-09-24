@@ -299,13 +299,13 @@ MVP 用 **Claude in Chrome**。已验证的选型依据：复用用户已登录�
 
 ## 7. 里程碑（按 R10 顺序）
 
-| 里程碑 | 交付 | 验收 |
-|---|---|---|
-| M0 脚手架与约定 | plugin.json、三个 SKILL.md 骨架、四个 schema（含 kind/status、applicability、fill/review、blockers/review_items、opening_status）、resolve_workspace.py（含 workspace 内 .gitignore 生成与缓存路径拒绝）、validate.py（confirmed 与 draft 两个入口）、requirements.txt、Chrome 预检记录、首批评测输入与 R11–R17 的合成反例 | plugin 静态校验通过且三个 skill 实际加载；§6 workspace 断言；预检结果如实记录 |
-| M1 访谈 | grill-direction SKILL.md、probe-playbook、多份合成示例、validator 正反例、访谈行为评测 | §6 访谈评测核心断言通过 |
-| M2/M3 首条流程 | 一份合成方向 → 一家 ATS → 候选判断 → 用户显式选择 → 本地表单 → application 审阅记录 | 端到端跑通，零最终提交 |
-| M2/M3 覆盖 | 另外两家 ATS、表单边界用例；接口约定稳定后两者可并行 | §6 ATS 与填表断言 |
-| M4 回归 | skill-creator 汇总评测、独立新会话评测、与无 skill 基线比较 | 没有实际执行的检查标未验证 |
+| 里程碑 | 交付 | 验收 | 状态（2026-09-24） |
+|---|---|---|---|
+| M0 脚手架与约定 | plugin.json、三个 SKILL.md 骨架、四个 schema（含 kind/status、applicability、fill/review、blockers/review_items、opening_status）、resolve_workspace.py（含 workspace 内 .gitignore 生成与缓存路径拒绝）、validate.py（confirmed 与 draft 两个入口）、requirements.txt、Chrome 预检记录、首批评测输入与 R11–R17 的合成反例 | plugin 静态校验通过且三个 skill 实际加载；§6 workspace 断言；预检结果如实记录 | 完成；plugin 校验通过，三个 skill 实际加载 |
+| M1 访谈 | grill-direction SKILL.md、probe-playbook、多份合成示例、validator 正反例、访谈行为评测 | §6 访谈评测核心断言通过 | 完成；一次合成用户真实多轮访谈通过核心断言（run 1），其余 eval 未运行 |
+| M2/M3 首条流程 | 一份合成方向 → 一家 ATS → 候选判断 → 用户显式选择 → 本地表单 → application 审阅记录 | 端到端跑通，零最终提交 | 部分：访谈 → Palantir 板采集 → 6 个候选判断（run 2）→ 用户选中 → facts 导入确认 → 申请记录（run 3，无浏览器故 blocked）。本地受控表单与零提交断言由 Playwright 驱动通过；Chrome 实操未做 |
+| M2/M3 覆盖 | 另外两家 ATS、表单边界用例；接口约定稳定后两者可并行 | §6 ATS 与填表断言 | 部分：三家 ATS 在线冒烟通过；表单边界用例在本地表单上有 Enter 陷阱与 Continue 即提交两项，其余待本机 |
+| M4 回归 | skill-creator 汇总评测、独立新会话评测、与无 skill 基线比较 | 没有实际执行的检查标未验证 | 未开始 |
 
 ## 8. 已确认的决定
 
@@ -326,6 +326,7 @@ MVP 用 **Claude in Chrome**。已验证的选型依据：复用用户已登录�
 
 - r1 2026-09-23：初稿，六项待确认决定。
 - r2 2026-09-23：写入用户确认的六项决定；浏览器方案定为 Claude in Chrome；增加评审回路。
+- r4.3 2026-09-24：里程碑表增加状态列；M2 增加 shortlist.py 与"关键词须含 board 语言"规则；M3 增加本地受控表单与 Chrome 预检清单。现状见 [status-report.md](status-report.md)。
 - r4.2 2026-09-23：R29：pending 字段对岗位的影响按 applicability 逐岗位判断，方向级 pending_fields 只展示（§3.5、§4.1 第 5 步）。
 - r4.1 2026-09-23：第 3 轮复核指出的两处一致性修正：§3.3 字段状态枚举改为与 §3.2 一致（confirmed / pending / conflict / skipped / unknown，any 属于 kind）；§3.4 示例因含 pending hard 改标 draft，confirmed 版本移至 skill assets。M0/M1 实现见 [m0-m1-report.md](m0-m1-report.md)。
 - r4 2026-09-23：处理第 2 轮评审 R11–R17。事实导入后需回读确认，只有 confirmed 事实进表单，禁止项恢复"不创建账号"（R11）；kind 与 status 分开，过滤只用"适用的已确认 hard"，零 hard 不得 eligible，draft 有独立校验入口与 exploratory 标记（R12）；candidate 记 opening_status、freshness、facts_revision，prepare 入口先复核，复核触发扩展（R13）；workspace 自带 .gitignore，会话内持有 workspace_root，目录切换先提示，拒绝缓存路径，开发 checkout 规则写明，措辞改为"可能被复制进缓存"（R14）；fill_status 与 review_status 分开，blockers 与 review_items 分开，ready_for_review 重新定义（R15）；primary_direction、人工结果记录、去重措辞修正（R16）；Lever 时间字段置 null，boards 观察记录独立目录（R17）；§1 措辞同步；§6 与 M0 补对应反例。

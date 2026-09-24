@@ -2,7 +2,7 @@
 
 这是一个计划在 Claude Code 中使用的求职助手插件。它先通过对话帮你说明白想要什么样的工作，再带着这些要求查找岗位、解释是否合适，最后把你选中的岗位申请准备到人工检查和提交之前。
 
-当前状态：截至 2026-09-23，仓库处于方案 r4（已回应两轮评审）阶段，尚未实现以下功能。本文描述预期的使用体验；实现细节见 [implementation-plan.md](./implementation-plan.md)，待解决的问题见 [implementation-plan-review.md](./implementation-plan-review.md)。
+当前状态：截至 2026-09-23，三个流程都已实现；访谈与找岗位各有一次真实运行记录，填表的浏览器部分待用户本机验证（见 chrome-precheck.md）。本文描述预期的使用体验；实现细节见 [implementation-plan.md](./implementation-plan.md)，待解决的问题见 [implementation-plan-review.md](./implementation-plan-review.md)。
 
 ## 你会怎样使用它
 

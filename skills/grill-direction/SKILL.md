@@ -96,6 +96,7 @@ When you stop, tell the user: where the file is, whether it is draft or confirme
 - **Examples as restrictions.** "Shenzhen, Singapore, the Bay Area" are `examples` that illustrate an attribute. Only write `allowed_values` when the user closed the list.
 - **Inventing observability.** For an abstract attribute like "young tech city", ask the user what they would look at to recognise it and record that as `observable_criteria`. If they cannot say, leave it out and note it; do not supply your own criteria as theirs.
 - **Inferring identity or work authorization.** Wanting to work in a country says nothing about visa status. Record authorization only from an explicit statement, and only in the facts profile, never as a direction field.
+- **Search hints only in the interview language.** Job boards are mostly English. Write `search_hints.keywords` and `deprioritize` in the user's language *and* in English (job-title vocabulary: "infrastructure engineer", "platform", "staff engineer"); a Chinese-only list matched nothing on three real boards in a live run.
 - **Treating the demo as the answer.** The synthetic examples in `assets/` show the format and one plausible path each. A different user with the same first sentence may need a completely different file (compare `example-synthetic-city-profile.md` with `example-synthetic-family-us.md`).
 
 ## Files

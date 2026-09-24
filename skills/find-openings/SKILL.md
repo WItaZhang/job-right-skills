@@ -61,6 +61,15 @@ It writes the board-level observation (request, raw pages, `retrieval_status`, c
 
 Provider facts the script encodes and you must not undo: Greenhouse has `updated_at` only and no team; Ashby has `publishedAt` (latest publish, not first) and a real `team` field that may be null; Lever documents no time fields at all, and its `team` is a label. `team` is never filled from `department`.
 
+### 4b. Shortlist before judging
+
+```bash
+python3 "${CLAUDE_SKILL_DIR}/scripts/shortlist.py" --workspace <root> --direction <id> --provider <p> --board <b> \
+    --limit 12 [--extra-keyword "<English term>" ...] [--extra-deprioritize "<English term>" ...]
+```
+
+It ranks the fetched openings by the direction's keywords, examples and observable criteria, and lists what the deprioritize terms pushed down. If the direction's hints are not in the board's language, add board-language terms with `--extra-keyword`; they are recorded in the output and go into `search_bias` together with the deprioritize terms. Judge the shortlist, not the whole board, and say so in the candidate file (`scanned` vs judged). A score is discovery ranking only; it is never a pass or fail.
+
 ### 5. Judge
 
 For each applicable field: pass / fail / unknown, each with `evidence_refs` into this candidate's `evidence` list. The evidence entry names the snapshot path and the single claim it supports ("JD text says 'individual contributor', no direct reports"). No relevant text: unknown. Impressions of the company, city or title are not evidence. Compensation with mismatched currency, period or base/total basis is unknown with the mismatch noted. Soft fields get meets / tradeoff / unknown in `soft_results`.
@@ -76,6 +85,7 @@ Write the candidate file, run the validator, fix what it reports, then present t
 ## Files
 
 - `scripts/ats_fetch.py` — provider adapters, evidence writing, `--fixture` for offline runs.
+- `scripts/shortlist.py` — keyword ranking over fetched openings with a transparent push-down list.
 - `fixtures/` — synthetic responses for the three providers, an empty list, a 404 and a timeout; used by `tests/test_ats_fetch.py`.
 - `references/evidence-rules.md` — the rules above in full, with the status table.
 - `../../schema/candidate.schema.json`, `../../scripts/validate.py candidate`.
