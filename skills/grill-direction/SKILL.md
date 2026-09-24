@@ -80,6 +80,10 @@ python3 "${CLAUDE_SKILL_DIR}/../../scripts/validate.py" direction <workspace_roo
 
 If it reports problems, fix the file or keep the direction as draft and tell the user exactly what is missing. The validator checks structure and that every reference exists; it cannot check whether your referenced entry actually supports the judgement. That part is on you: reread the entry before you cite it.
 
+### 6b. Before confirming, check the level
+
+If the user has any work experience and `role.level` is not in the file, ask it before confirming (playbook §5, 角色与成长). Without it the search returns interns and new grads next to staff roles. Their current level goes into the facts profile as a fact; the level they want is a preference and follows the usual strength rule.
+
 ### 7. Stopping
 
 Stop when the user asks to pause, or when the frontier is empty for the current scope. Only when the frontier is empty and a dimension is still in `not_asked` do you open a new dimension yourself, and only one at a time. A dimension the user answered with "unknown" or "skip" is asked; do not reopen it unless new information makes the question meaningful again. Filling all eight dimensions is not a goal.

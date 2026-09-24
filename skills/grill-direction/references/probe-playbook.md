@@ -62,10 +62,12 @@ Use this to notice gaps, not as a questionnaire. Open a new dimension yourself o
 | 人生方向 | What this change is for; time horizon | "What should be different a year after you start the new job?" |
 | 压力承受 | Which pressures are fine, which are unsustainable | "Describe a week at work that you'd consider too much. What made it too much?" |
 | 风险容忍 | Uncertainty they accept: company stage, comp structure, contract stability | "If a company might not exist in two years but the work is exactly right, how do you feel?" |
-| 角色与成长 | IC vs. management, decision scope, mentoring | "Do you want to be the person doing it or the person deciding who does it?" |
+| 角色与成长 | IC vs. management, decision scope, mentoring, **target level** | "Do you want to be the person doing it or the person deciding who does it?" then "What level are you aiming for next: same as now, one up, or does it not matter?" |
 | 地点与时间 | Remote/hybrid/onsite, regions, time zones, relocation, from when | "Where will you physically be, and when does that change?" |
 | 薪酬与身份 | Floors and their basis (currency, period, base vs total); authorization as stated by them | "Is there a number below which you'd stop the conversation? In what currency, per year or month, base or total?" |
 | 团队环境 | Collaboration style, meetings, feedback, team size | "Think of the best team you were on. What did an ordinary day look like?" |
+
+Target level (`role.level`): ask it whenever the user has work experience, because boards list interns, new grads, mid, senior and staff roles side by side and a direction without a level pulls in all of them (live run 2 returned only internships and new-grad roles). Their *current* level is a fact for the facts profile; the level they *want* is a preference. Record `value` as the user's words mapped to a coarse band (intern / new_grad / mid / senior / staff_plus / any), with `examples` of titles they consider equivalent. It becomes `kind: hard` only after the strength question like any other field; "senior or above" is often soft ("I'd take a strong mid-level role at the right company"). Also write the level vocabulary into `search_hints`: keywords for the wanted bands, deprioritize for the ones they exclude (e.g. "intern", "internship", "new grad", "university").
 
 Compensation: never compare numbers with different bases. If they give a monthly total and a yearly base, record both with their `basis` and leave the comparison as an open question.
 
@@ -87,6 +89,7 @@ Every 4–5 rounds, in their language:
 > Here is what I have so far.
 > Hard lines (would refuse otherwise): …
 > Preferences (matter, but negotiable): …
+> Target level: …
 > No preference: …
 > Not yet known / skipped: …
 > Open questions I still want to ask: …

@@ -37,7 +37,7 @@ The frontmatter is a snapshot. It is overwritten on each revision. History is in
 
 ## Field id
 
-Dotted path, one independently confirmable condition per id: `location.city_profile`, `location.workplace_type`, `company.size`, `company.funding_stage`, `role.nature`, `industry`, `compensation.base`. Do not bundle two conditions into one id unless the user stated and tested them as one thing.
+Dotted path, one independently confirmable condition per id: `location.city_profile`, `location.workplace_type`, `company.size`, `company.funding_stage`, `role.nature`, `role.level` (target level band: intern / new_grad / mid / senior / staff_plus / any), `industry`, `compensation.base`. Do not bundle two conditions into one id unless the user stated and tested them as one thing.
 
 ## Field record
 

@@ -104,10 +104,11 @@ def shortlist(workspace: Path, direction: dict, provider: str | None, board: str
         if board and n.get("board") != board:
             continue
         s = score_opening(n, plus, minus)
+        # snapshot uses forward slashes on every OS (Windows check 1)
         rows.append({
             "opening_id": n["opening_id"], "title": n.get("title"), "team": n.get("team"), "department": n.get("department"),
             "locations": n.get("locations") or [], "workplace_type": n.get("workplace_type"), "job_url": n.get("job_url"),
-            "snapshot": str(p.relative_to(workspace)), "checked_at": n.get("checked_at"), **s,
+            "snapshot": p.relative_to(workspace).as_posix(), "checked_at": n.get("checked_at"), **s,
         })
     kept = [r for r in rows if r["score"] >= min_score and not r["deprioritized_by"]]
     pushed_down = [r for r in rows if r["deprioritized_by"]]  # shown regardless of score, for transparency
