@@ -1,5 +1,9 @@
 # 状态报告（2026-09-24，试用版）
 
+**2026-09-26 体验更新**：访谈已改为默认每轮 6–8 个主题、按主题继续追问、支持部分回答；开场说明产出、20–30 分钟预期及操作方式，语音按 20/25/30 分钟检查点收尾；每批集中保存。新增 4 个行为 eval 定义（总数 9 个），还未跑新节奏的真实多轮语音验证。下文 run 1/4 是旧节奏的证据，不能据此声称新版本已在 30 分钟内跑通。
+
+本次检查：`tests/test_validate.py` 61 项通过；Claude plugin validate、Codex 适配版 skill/plugin 格式校验通过；9 个 eval 定义可解析。已通过本地 marketplace 重装 Codex 插件，并逐文件核对新缓存与源文件一致。上述检查验证格式与原有校验规则，不代表新增 4 个行为 eval 已执行。
+
 一句话：**三段都实现了并已开 PR 作为试用版；访谈与找岗位各有两次真实端到端运行记录（第二次验证了"目标职级"修正）；第三段除浏览器实操外全部验证，浏览器实操只能在用户本机做，清单已给。**
 
 PR：https://github.com/WItaZhang/job-right-skills/pull/1 （标题注明 trial version、Chrome 未验收）。评审人在 Windows 中文路径环境复跑：修掉 shortlist 路径分隔符后测试通过，记录见 [windows-check-1](live-runs/windows-check-1/report.md)。
@@ -18,7 +22,7 @@ PR：https://github.com/WItaZhang/job-right-skills/pull/1 （标题注明 trial 
 
 ```text
 .claude-plugin/plugin.json                 plugin: job-right（claude plugin validate 通过；三个 skill 在会话中列出）
-skills/grill-direction/                    SKILL.md + probe-playbook + template-schema + 模板 + 两份合成示例 + 5 个 eval
+skills/grill-direction/                    SKILL.md + probe-playbook + template-schema + 模板 + 两份合成示例 + 9 个 eval
 skills/find-openings/                      SKILL.md + evidence-rules + ats_fetch.py + shortlist.py + 三家 fixtures
 skills/prepare-application/                SKILL.md + form-rules + fixtures/local-form（index.html + server.py）
 schema/                                    direction / candidate / application / background_facts
@@ -40,7 +44,7 @@ docs/chrome-precheck.md                    用户本机预检清单
 ## 已实现但未验证
 
 - **Chrome 实操**：连接、上传、在真实申请页按动作效果停下。容器无扩展，无法做。
-- 访谈的稳定性：两次运行（run 1、run 4），第二次已包含所有 SKILL.md 修改；两次都通过核心断言，但样本仍小。
+- 访谈的稳定性：两次运行（run 1、run 4）通过当时版本的核心断言，但样本仍小；2026-09-26 新增的批量追问与语音时间预算尚未真实运行验证。
 - find-openings 的公司发现步骤（WebSearch → 官网 → 招聘板）中"发现"一环。
 - Windows 上的新增测试。
 - 时间戳格式：容器缺 rfc3339-validator，只保证是字符串。

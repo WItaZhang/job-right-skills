@@ -4,7 +4,7 @@ How to take one statement from a user and turn it into a field whose meaning, st
 
 ## 1. The ladder
 
-Every statement starts a ladder. Advance one step per round. Record each exchange as an `### I-xxx` entry; the field cites the entries by id.
+Every statement starts a ladder. Advance one ready step per ladder in a round; a round usually covers 6–8 different themes. Record each answered question as its own `### I-xxx` entry, preserving the theme label; save the batch together. Fields cite the relevant entries, not a catch-all reference to the whole batch. If a user volunteered a clear answer to a later step, reuse that evidence rather than mechanically asking again.
 
 | Step | Purpose | Typical question | What you write |
 |---|---|---|---|
@@ -54,7 +54,7 @@ When splitting: create the new file with `split_from: <old id>`, copy only the f
 
 ## 5. Dimension checklist
 
-Use this to notice gaps, not as a questionnaire. Open a new dimension yourself only when the frontier is empty and the dimension is in `interview_progress.not_asked`. Move a dimension to `asked` as soon as you have asked one question in it, whatever the answer.
+Use this to select useful themes for the opening batch and notice gaps later, not as a compulsory questionnaire. Relevant dimensions in `interview_progress.not_asked` can join a batch while other ladders are active, before the time budget moves to wrap-up. Prioritize follow-ups to answers already given. Move a dimension to `asked` as soon as you have asked one question in it, whatever the answer; an omitted answer stays in `open_questions` without being mislabeled unknown or skipped. No need to cover every dimension.
 
 | Dimension | What you are trying to learn | Opening question that tends to work |
 |---|---|---|
@@ -75,16 +75,25 @@ Identity and authorization: record only what they state, in the facts profile, n
 
 ## 6. Phrasing
 
-- One question per message. If you need two, pick the one whose answer changes the most.
+- One short question per numbered theme; usually 6–8 themes per message. Keep the theme's number and label in later batches. Ask fewer when fewer useful questions are ready or time is short; no padding.
 - Concrete beats abstract: name a city, a headcount, a scenario.
-- Reflect before you probe: "So the US itself isn't the point, it's the density of people your age doing tech. Did I get that right?" Then ask the next step.
+- Reflect briefly before the batch, then ask the next ready question for each theme. For example: "It sounds like tech-community density matters more than the country; correct me if that misses it." Do not add a separate confirmation question before every probe.
 - Do not recommend answers. You can offer alternatives to test meaning; you do not tell them what they should want.
 - Accept "I don't know" and "skip" the first time. Record the status and move on.
+- Accept partial, unnumbered or continuous spoken answers. Do not infer agreement from omissions, repeat every unanswered question, or demand a numbered response before continuing.
 - When they pause, save and tell them where you are.
 
-## 7. Readback template
+## 7. Orientation, progress and closing readback
 
-Every 4–5 rounds, in their language:
+At the start, briefly explain the outcome, time estimate and controls, in their language. For example:
+
+> We'll turn what you want from your next job into a saved direction draft, showing deal-breakers, preferences and what is still unclear. Plan on 20–30 minutes; in voice we'll aim to wrap up within 30. I'll group short questions by theme. You can answer by number or just talk, answer only some, skip, say you don't know, correct me, or pause and return later.
+
+Do not wait for an acknowledgement before the first batch. Reuse facts from the user's opening rather than asking them again. Between batches, summarize only new understanding and the purpose of the next questions. For example:
+
+> We have a clearer picture of the work and location you want. Next we'll test alternatives so I don't mistake a preference for a deal-breaker.
+
+Use the actual time checks and 20/25/30-minute checkpoints in `SKILL.md`. Report remaining time approximately, not as a guarantee. At wrap-up, provide a compact readback:
 
 > Here is what I have so far.
 > Hard lines (would refuse otherwise): …
@@ -92,7 +101,20 @@ Every 4–5 rounds, in their language:
 > Target level: …
 > No preference: …
 > Not yet known / skipped: …
-> Open questions I still want to ask: …
-> What did I get wrong?
+> Still open, saved for another time: …
+> Saved draft / confirmed direction: …
+> Next step: …
 
-Record the readback and their corrections as an interview entry.
+Invite corrections without making an answer compulsory for saving or stopping. Record corrections as interview entries. A broad acknowledgement cannot substitute for an unanswered alternative test or strength question. If time is up, leave those gaps in a draft.
+
+## 8. How parallel follow-ups work (synthetic)
+
+An opening batch can ask about work content, location, role, level, workload, risk and team environment, each with a stable number and label. Suppose the user answers only three themes:
+
+| Theme | User's answer | Next ready question | What stays unresolved |
+|---|---|---|---|
+| 1. Work | "AI infra; I enjoy building systems others use." | "Would developer tooling outside AI still give you that satisfaction?" | Whether AI itself matters; strength |
+| 2. Location | "The US, because I want a dense tech community." | "Would Singapore or Shenzhen work if they offered that community?" | Alternative acceptance; strength |
+| 3. Role | "IC; I don't want performance reviews or hiring." | "Would technical leadership without people management work?" | Whether that alternative fits; strength |
+
+The next batch has these three follow-ups, not six to eight invented extras. Keep unanswered level/workload/risk/team questions in `open_questions`; do not repeat them automatically or assign answers. If the user then accepts the location alternative, that establishes meaning, not a hard line. Its strength question belongs in the following batch alongside the next ready questions for work and role. Once a theme is settled, drop it from the active batch.

@@ -1,6 +1,6 @@
 {
   "skill_name": "grill-direction",
-  "note": "Not yet run as of 2026-09-23. These evals feed a simulated interview transcript to the skill and ask it to (a) write the direction file(s) and (b) state the next questions. They check the semantic rules the validator cannot: meaning vs strength, following the user's reason, scope before conflict, no invented hard lines, no premature conflict. Workspace root for runs is given inline so no real profile is touched. Transcript-based evals cannot exercise the live frontier, periodic readback or pause/resume; at least one real multi-turn session with a scripted user persona is required before M1 is called verified (review R27).",
+  "note": "Behavioral eval definitions, not an execution report. Cases 1-5 retain the original semantic scenarios; cases 6-9 were added on 2026-09-26 for batch pacing and the voice time budget and have not been run. Prior live runs 1/4 predate this pacing change. Use isolated synthetic workspaces; substitute a temporary absolute path for /tmp on Windows. Inspect messages, saved artifacts and tool traces, not exact wording. Transcript/checkpoint cases cannot prove actual duration or pause/resume behavior; a timed multi-turn voice run is still needed.",
   "evals": [
     {
       "id": 1,
@@ -76,6 +76,68 @@
         "Neither field is removed, downgraded to soft, or overwritten by the other",
         "The direction is not split into two files",
         "The next message names the conflict plainly and asks one question that lets the user resolve it; it does not recommend which side to drop"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "batch-opening-with-orientation",
+      "prompt": "Use an isolated synthetic workspace at /tmp/jr-eval-6. Start grill-direction in a voice session that can display chat text. The user says: 我想换工作，现在做了三年后端，想找更有意思的东西，你帮我梳理一下吧。 Produce the opening and first batch; stop to wait for the user.",
+      "expected_output": "A brief outcome/time/controls orientation followed immediately by 6-8 numbered, independently answerable questions grounded in the stated background. The questions can be answered together; no extra permission or single-opening-question round.",
+      "files": [],
+      "expectations": [
+        "Before setup tools or questions, explains a saved direction draft containing deal-breakers, preferences and unresolved items, without promising a confirmed direction",
+        "Gives a 20-30 minute estimate and voice wrap-up target within 30 minutes, without claiming measured performance",
+        "Explains natural speech or numbered/partial answers, skipping, uncertainty, corrections and pausing",
+        "First question batch has 6-8 brief numbered themes, including desired role/level as useful context without re-asking the stated three years of experience",
+        "Does not ask an alternative or strength question based on an answer not yet supplied in this same batch",
+        "Reads the start time, does not create personal facts or hard fields without supporting answers, and does not wait for approval to begin the batch"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "parallel-followups-with-partial-voice-answer",
+      "prompt": "Use an isolated synthetic workspace at /tmp/jr-eval-7. Continue grill-direction 8 minutes into a voice interview. Previous questions were: 1. 工作内容：下一份工作最想做什么？ 2. 地点：最想去哪里？ 3. 角色：偏向亲自做事还是带人？ 4. 职级：下一份瞄准什么职级？ 5. 压力：什么样的一周会让你受不了？ 6. 风险：愿意接受多大公司风险？ 7. 团队：喜欢怎样的协作方式？ The user now speaks without numbering: 工作想做 AI infra，我喜欢做别人用得上的底层系统。美国主要是想要科技圈子密集。角色上我想做 IC，不想做绩效和招聘。公司风险先跳过，团队我暂时不知道。 Produce the update and next batch, saving only the supported draft.",
+      "expected_output": "Three concrete next-step questions under the same work/location/role labels, a brief progress summary, one consolidated draft save with separate evidence entries, and no repeated skipped/unknown/omitted questions.",
+      "files": [],
+      "expectations": [
+        "Maps the unnumbered speech correctly and continues the three answered themes under their earlier labels/numbers",
+        "Tests meaning for work, location and role using plausible alternatives rather than promoting any to hard",
+        "Asks fewer than 6 questions because only three follow-ups are ready; does not pad with new themes",
+        "Risk is skipped and team is unknown, with user-source references; neither is re-asked",
+        "Omitted level and workload questions remain deferred open_questions, not fabricated answers or skipped/unknown fields, and are not automatically repeated",
+        "One consolidated write per direction contains distinct interview entries for each answered theme and preserves history; tool trace shows no per-question save/reload/validation cycle",
+        "The saved direction passes scripts/validate.py direction in draft mode"
+      ]
+    },
+    {
+      "id": 8,
+      "name": "voice-wrap-up-checkpoint",
+      "prompt": "Use an isolated synthetic workspace at /tmp/jr-eval-8. Copy the family-us synthetic direction there. This voice interview began 26 minutes before the injected current clock time; provide the evaluator clock/start-time evidence to the model and allow time reads. The user has just answered the pending family-commute strength question: 九十分钟这个不是硬底线，交通方便的话再远一点也可以。 Continue the workflow. Several other dimensions have not been asked.",
+      "expected_output": "Closing readback and saved draft, with the commute preference softened according to the answer. Unasked themes remain deferred. No new exploratory batch or artificial second hard condition.",
+      "files": [],
+      "expectations": [
+        "Uses clock/start-time evidence to enter wrap-up instead of opening unasked dimensions or a new 6-8 question batch",
+        "Commute field becomes soft with the supplied exchange as supporting evidence, preserving its previous value and reason in revision history",
+        "Does not re-ask skipped role or no-preference city atmosphere",
+        "Provides emerging direction, deal-breakers/preferences, unresolved items, saved-file location and a practical next step",
+        "Keeps draft status with only one confirmed hard field and does not infer a second hard to meet the minimum",
+        "Invites optional corrections without blocking the save or stop; remaining work is resumable",
+        "The saved direction passes scripts/validate.py direction"
+      ]
+    },
+    {
+      "id": 9,
+      "name": "budget-expiry-does-not-create-hard-evidence",
+      "prompt": "Use an isolated synthetic workspace at /tmp/jr-eval-9. Continue a synthetic voice interview whose start was 31 minutes before the injected current clock time; provide that clock evidence and allow time reads. Earlier the user said 我想去美国，因为想进年轻人多的科技圈. The most recent question was whether Singapore or Shenzhen with a similar community would work. The user just replied 可以，都行，挺重要的. No strength question has been asked, and the user has not requested extra time. Produce the next response and supported direction file.",
+      "expected_output": "Immediate closing summary and draft save, no further probing round. City-community meaning has alternative-test evidence but its strength remains unconfirmed; the remaining strength question is saved for later.",
+      "files": [],
+      "expectations": [
+        "Does not start a new probing round or pressure the user to extend the interview after the budget",
+        "Records alternative acceptance without treating 挺重要的 as a refusal or inventing hard_confirmation_ref",
+        "Leaves strength unconfirmed, stores the outstanding strength question, and keeps direction status draft",
+        "Does not claim the interview finished within 30 minutes or fabricate timings",
+        "Saves before handing back the result and makes the unresolved status clear",
+        "The saved direction passes scripts/validate.py direction"
       ]
     }
   ]
